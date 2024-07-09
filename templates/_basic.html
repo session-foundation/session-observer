@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   {% block head %}
-      <title>{% block title %}{% endblock %}Oxen{{' TESTNET' if info and info.testnet else ' DEVNET' if info and info.devnet else ''}}
+      <title>{% block title %}{% endblock %}Oxen{{' TESTNET' if info and info.testnet else ' DEVNET' if info and info.devnet else ' STAGENET' if info and info.stagenet else ''}}
   Blockchain Explorer</title>
     <link rel="stylesheet" type="text/css" href="/style.css">
     {% if refresh %}
@@ -24,6 +24,8 @@
                     <span style="color:#ff6b62">Testnet</span>
                 {%elif info and info.devnet%}
                     <span style="color:#af5bd2">Devnet</span>
+                {%elif info and info.stagenet%}
+                    <span style="color:#32cd32">Stagenet</span>
                 {%endif%}
                 Blockchain Explorer</a></h1>
         <form action="/search" method="get" class="top-search">
