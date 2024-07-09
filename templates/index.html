@@ -27,12 +27,19 @@
 
             {% if info.mainnet and config.lokinet_mainnet_url %}
                 <span><a href="{{config.lokinet_mainnet_url}}">Connect via Lokinet</a></span>
+            {% elif info.stagenet and config.lokinet_stagenet_url %}
+                <span><a href="{{config.lokinet_stagenet_url}}">Connect via Lokinet</a></span>
             {% elif info.testnet and config.lokinet_testnet_url %}
                 <span><a href="{{config.lokinet_testnet_url}}">Connect via Lokinet</a></span>
             {% elif info.devnet and config.lokinet_devnet_url %}
                 <span><a href="{{config.lokinet_devnet_url}}">Connect via Lokinet</a></span>
             {% endif %}
 
+            {% if config.stagenet_url and not info.stagenet %}
+                <span><a href="{{config.stagenet_url}}">Go to stagenet explorer</a>
+                    {%if config.lokinet_stagenet_url%}(<a href="{{config.lokinet_stagenet_url}}">via Lokinet</a>){%endif%}
+                </span>
+            {% endif %}
             {% if config.testnet_url and not info.testnet %}
                 <span><a href="{{config.testnet_url}}">Go to testnet explorer</a>
                     {%if config.lokinet_testnet_url%}(<a href="{{config.lokinet_testnet_url}}">via Lokinet</a>){%endif%}
