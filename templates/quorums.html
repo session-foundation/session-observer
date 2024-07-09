@@ -5,7 +5,7 @@
 
 <div class="Wrapper">
 
-    <h2>Service Node testing quorums:</h2>
+    <h2>Session Node testing quorums:</h2>
     <div class="TitleUnderliner"></div>
 
     <div class="obligations quorums">
@@ -88,7 +88,7 @@
                 </h2>
 
                 <div class="validators">
-                    <!--<label>Service Nodes:</label>-->
+                    <!--<label>Session Nodes:</label>-->
                     {%for v in q.quorum.validators%}
                         <a class="sn" href="/sn/{{v}}" title="{{v}}
 Validator {{loop.index}}/{{q.quorum.validators | length}}">{{v}}</a>
@@ -115,13 +115,13 @@ Validator {{loop.index}}/{{q.quorum.validators | length}}">{{v}}</a>
                 <h2 title="Determined by blocks {{q.height}} and {{qnext.height}}">Blocks {{q.height + 30}}–{{q.height + 34}}{%if current%} (current){%endif%}</h2>
 
                 <div class="validators q0">
-                    <label title="Subquorum 0; a blink must be approved by at least 7 service nodes from each subquorum">Q₀:</label>
+                    <label title="Subquorum 0; a blink must be approved by at least 7 session nodes from each subquorum">Q₀:</label>
                     {%for v in qnext.quorum.validators%}
                         <a class="sn" href="/sn/{{v}}" title="{{v}}">{{v}}</a>
                     {%endfor%}
                 </div>
                 <div class="validators q1">
-                    <label title="Subquorum 1; a blink must be approved by at least 7 service nodes from each subquorum">Q₁:</label>
+                    <label title="Subquorum 1; a blink must be approved by at least 7 session nodes from each subquorum">Q₁:</label>
                     {%for v in q.quorum.validators%}
                         <a class="sn" href="/sn/{{v}}" title="{{v}}">{{v}}</a>
                     {%endfor%}

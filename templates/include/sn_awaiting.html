@@ -29,7 +29,7 @@
                 <td>{{ (0 if sn.num_contributions >= max_contributors else (sn.contribution_open / (max_contributors - sn.num_contributions)) | round(method='ceil')) | oxen(tag=false, fixed=true) }}</td>
                 <td>
                     {%if sn.requested_unlock_height%}
-                        <span title="Service Node unlock in progress (unlocks at block {{sn.requested_unlock_height}})">🔓</span>
+                        <span title="Session Node unlock in progress (unlocks at block {{sn.requested_unlock_height}})">🔓</span>
                         {{((sn.requested_unlock_height - info.height) * 120 + server.datetime.timestamp()) | from_timestamp | format_datetime('short')}}
                         ({{((sn.requested_unlock_height - info.height) * 120) | reltime}})
                     {%else%}

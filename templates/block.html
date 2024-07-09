@@ -43,7 +43,7 @@ Cumulative difficulty {{block_header.cumulative_difficulty}}"><label>Difficulty:
             <span title="Pulse random value: {{block.info.pulse.random_value}}
 Validator bits: {{"{:011b}".format(block.info.pulse.validator_bitset)}}"><label>Block type:</label> Pulse 💓</span>
             {%if block.info.pulse.round > 0%}
-                <span title="When &gt; 0 this indicates how many Service Node rounds failed to produce a valid, signed Pulse block in time">
+                <span title="When &gt; 0 this indicates how many Session Node rounds failed to produce a valid, signed Pulse block in time">
                     <title>Pulse round:</title> {{block.info.pulse.round}}
                 </span>
             {%endif%}
@@ -69,7 +69,7 @@ Note that this value does not include earned transaction fees ({{sum_fees | oxen
         {%endif%}
 
         {%if miner_tx and miner_tx.extra.sn_winner%}
-          <span><label>Service Node Winner:</label>
+          <span><label>Session Node Winner:</label>
             {%if miner_tx.extra.sn_winner == "0000000000000000000000000000000000000000000000000000000000000000"%}
               None
             {%else%}

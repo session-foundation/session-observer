@@ -2,18 +2,18 @@
     {% if tx.version >= 4 -%}
         {% if tx.type == 1 and 'sn_state_change' in tx.extra -%}
             {% if tx.extra.sn_state_change.type == 'decom' -%}
-                <span class="icon" title="Service Node decommission">👎{%if text%} decommission{%endif%}</span>
+                <span class="icon" title="Session Node decommission">👎{%if text%} decommission{%endif%}</span>
             {% elif tx.extra.sn_state_change.type == 'recom' -%}
-                <span class="icon" title="Service Node recommission">👍{%if text%} recommission{%endif%}</span>
+                <span class="icon" title="Session Node recommission">👍{%if text%} recommission{%endif%}</span>
             {% elif tx.extra.sn_state_change.type == 'dereg' -%}
-                <span class="icon" title="Service Node deregistration">🚫{%if text%} deregistration{%endif%}</span>
+                <span class="icon" title="Session Node deregistration">🚫{%if text%} deregistration{%endif%}</span>
             {% elif tx.extra.sn_state_change.type == 'ip' -%}
-                <span class="icon" title="Service Node IP change penalty">📋{%if text%} ip change{%endif%}</span>
+                <span class="icon" title="Session Node IP change penalty">📋{%if text%} ip change{%endif%}</span>
             {% else -%}
                 <span class="icon" title="Unknown state change transaction">❓{%if text%} unknown state change{%endif%}</span><!-- Either a bug or a malformed transaction -->
             {% endif -%}
         {% elif tx.type == 2 -%}
-            <span class="icon" title="Service Node stake unlock — {{tx.extra.sn_pubkey}}">🔓{%if text%} unlock{%endif%}</span>
+            <span class="icon" title="Session Node stake unlock — {{tx.extra.sn_pubkey}}">🔓{%if text%} unlock{%endif%}</span>
         {% elif tx.type == 4 and 'ons' in tx.extra -%}
             {% if 'buy' in tx.extra.ons -%}
                 <span class="icon" title="Oxen Name Service Buying">🎫{%if text%} LNS purchase{%endif%}</span>
@@ -21,7 +21,7 @@
                 <span class="icon" title="Oxen Name Service Updating">💾{%if text%} LNS update{%endif%}</span>
             {% endif -%}
         {% elif 'sn_registration' in tx.extra -%}
-            <span class="icon" title="Service Node registration
+            <span class="icon" title="Session Node registration
                          {%-if tx.extra.sn_registration.fee == 1000000%} (solo)
                          {%-else%} ({{tx.extra.sn_registration.fee / 10000}}% fee)
                          {%-endif%}
@@ -30,7 +30,7 @@
 {{c.wallet | truncate(15)}} ({{c.portion / 10000}}% stake)
 {%-endfor%}">🏁{%if text%} registration{%endif%}</span>
         {%- elif 'sn_contributor' in tx.extra -%}
-            <span class="icon" title="Service Node contribution – {{tx.extra.sn_pubkey}} / {{tx.extra.sn_contributor}}">⚑
+            <span class="icon" title="Session Node contribution – {{tx.extra.sn_pubkey}} / {{tx.extra.sn_contributor}}">⚑
             {%-if text%} contribution{%endif%}</span>
         {%- elif tx.coinbase%}
             <span class="icon" title="Block reward">🎁{%if text%} block reward{%endif%}</span>
