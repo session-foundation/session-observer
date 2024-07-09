@@ -55,11 +55,6 @@
                     {%if config.lokinet_mainnet_url%}(<a href="{{config.lokinet_mainnet_url}}">via Lokinet</a>){%endif%}
                 </span>
             {% endif %}
-            {% if info.testnet %}
-                <span>This is <span style="color:#ff6b62; font-weight: bold">TESTNET</span> blockchain</span>
-            {% elif info.devnet %}
-                <span>This is <span style="color:#af5bd2; font-weight: bold">DEVNET</span> blockchain</span>
-            {% endif %}
         </div>
 
         <div class="TitleDivider"></div>
