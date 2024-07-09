@@ -29,6 +29,23 @@
 {%-for c in tx.extra.sn_registration.contributors%}
 {{c.wallet | truncate(15)}} ({{c.portion / 10000}}% stake)
 {%-endfor%}">🏁{%if text%} registration{%endif%}</span>
+        {% elif 'type' in tx.extra %}
+            {% if tx.extra.type == 'ethereum_service_node_deregister' %}
+                <span class="icon" title="Session Node deregistration">🚫{%if text%} deregistration{%endif%}</span>
+            {% elif tx.extra.type == 'ethereum_service_node_exit' %}
+                <span class="icon" title="Session Node exit">🚫{%if text%} exit{%endif%}</span>
+            {% elif tx.extra.type == 'ethereum_service_node_leave_request' %}
+                <span class="icon" title="Session Node leave request">🚫{%if text%} leave request{%endif%}</span>
+            {% elif tx.extra.type == 'ethereum_new_service_node' %}
+                <span class="icon" title="Session Node registration
+                             {%-if len(tx.extra.contributors) == 1%} (solo)
+                             {%-else%} ({{tx.extra.fee / 10000}}% fee)
+                             {%-endif%}
+                             {{tx.extra.service_node_pubkey}}
+                             {%-for c in tx.extra.sn_registration.contributors%}
+                             {{c.wallet | truncate(15)}} ({{c.portion / 10000}}% stake)
+                             {%-endfor%}">🏁{%if text%} registration{%endif%}</span>
+            {% endif %}
         {%- elif 'sn_contributor' in tx.extra -%}
             <span class="icon" title="Session Node contribution – {{tx.extra.sn_pubkey}} / {{tx.extra.sn_contributor}}">⚑
             {%-if text%} contribution{%endif%}</span>

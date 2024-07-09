@@ -212,6 +212,48 @@ This tx does not includes a vote from this testing session node (only 7 votes ar
             <p><label>Session Node Public Key:</label> {{tx.extra.sn_pubkey}}</p>
             <p><label>Contributor Address:</label> {{tx.extra.sn_contributor}}</p>
             <p><label>Contribution Amount:</label> {%if 'stake_amount' in tx%}{{tx.stake_amount | oxen}}{%else%}???{%endif%}</p>
+        {% elif 'type' in tx.extra %}
+            {% if tx.extra.type == 'ethereum_service_node_deregister' %}
+                <h2>Session Node Deregister</h2>
+                <p><label>BLS Public Key:</label> {{tx.extra.bls_pubkey}}</p>
+            {% elif tx.extra.type == 'ethereum_service_node_exit' %}
+                <h2>Session Node Exit Request</h2>
+                <p><label>BLS Public Key:</label> {{tx.extra.bls_pubkey}}</p>
+                <p><label>Ethereum Address:</label> {{tx.extra.eth_address}}</p>
+                <p><label>Contribution Amount:</label> {{tx.extra.amount}}</p>
+            {% elif tx.extra.type == 'ethereum_service_node_leave_request' %}
+                <h2>Session Node Leave Request</h2>
+                <p><label>BLS Public Key:</label> {{tx.extra.bls_pubkey}}</p>
+            {% elif tx.extra.type == 'ethereum_new_service_node' %}
+                <h2>Session Node Register Metadata</h2>
+                <p><label>Session Node Public Key:</label> {{tx.extra.service_node_pubkey}}</p>
+                <p><label>BLS Public Key:</label> {{tx.extra.bls_pubkey}}</p>
+                <p><label>Ethereum Address:</label> {{tx.extra.eth_address}}</p>
+                <p><label>Operator fee:</label>
+                {%if len(tx.extra.contributors) == 0%}N/A (solo registration)
+                {%else%}{{(tx.extra.fee / 10000) | chop0}}%
+                {%endif%}</p>
+
+                <h2>Session Node Registration Address(es)</h2>
+                <div class="TitleDivider"></div>
+                <table class="Table">
+                    <thead>
+                        <tr>
+                            <td>Ethereum Address</td>
+                            <td>Amount</td>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {%for c in tx.extra.contributors%}
+                            <tr>
+                                <td>{{c.address}}</td>
+                                <td>{{(c.amount}}%</td>
+                            </tr>
+                        {%endfor%}
+                    </tbody>
+                </table>
+            {% endif %}
         {% endif %}
     {% endif %}
 
