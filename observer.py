@@ -22,7 +22,7 @@ import pysodium
 import nacl.encoding
 import nacl.hash
 import base58
-import sha3
+from Cryptodome.Hash import keccak
 import config
 import local_config
 from lmq import FutureJSON, omq_connection
@@ -228,29 +228,47 @@ def get_quorums(quorums_future):
     return quo
 
 def get_mempool_future(omq, oxend):
-    return FutureJSON(omq, oxend, 'rpc.get_transaction_pool', 5, args={"tx_extra":True, "stake_info":True})
+    return FutureJSON(omq, oxend, 'rpc.get_transaction_pool', 5, args={"tx_extra":True, "tx_extra_raw": True, "stake_info":True})
 
 def parse_mempool(mempool_future):
     # mempool RPC return values are about as nasty as can be.  For each mempool tx, we get back
     # *both* binary+hex encoded values and JSON-encoded values slammed into a string, which means we
     # have to invoke an *extra* JSON parser for each tx.  This is terrible.
     mp = mempool_future.get()
+
+    # Oxen 10 and earlier return as 'transactions', 11+ returns 'txs' to unify with the
+    # `get_transactions` endpoint, so rewrite the Oxen 10 response to look like oxen 11+:
     if 'transactions' in mp:
+        rename = {
+                'id_hash': 'tx_hash',
+                'blob_size': 'size',
+                'max_used_block_id_hash': 'max_used_block',
+                'max_used_block_height': 'max_used_height',
+                'last_failed_id_hash': 'last_failed_hash',
+                'receive_time': 'received_timestamp',
+                'tx_blob': 'data',
+        }
+        for tx in mp['transactions']:
+            # Apparently, in Oxen 10 and earlier, *some* tx info is in the outer request, and *some*
+            # other info is inside a double-encoded "tx_json", so we have to merge them together.
+            # This is truly horrible, even by Monero standards.
+            info = json.loads(tx["tx_json"])
+            info['tx_extra_raw'] = bytes_to_hex(info['extra'])
+            del info['extra']
+            tx.update(info)
+
+            for from_k, to_k in rename.items():
+                tx[to_k] = tx.pop(from_k)
+
+        mp['txs'] = mp.pop('transactions')
+
+    if 'txs' in mp:
         # If we have a cached value we have already sorted it
         if '_sorted' not in mp:
-            mp['transactions'].sort(key=lambda tx: (tx['receive_time'], tx['id_hash']))
+            mp['txs'].sort(key=lambda tx: (tx['received_timestamp'], tx['tx_hash']))
             mp['_sorted'] = True
-
-        for tx in mp['transactions']:
-            if 'type' not in tx and 'tx_json' in tx:
-                # Legacy code for Oxen 10 and earlier
-                info = json.loads(tx["tx_json"])
-                # FIXME -- do we have parsed extra stuff already?
-                info['tx_extra_raw'] = bytes_to_hex(info['extra'])
-                del info['extra']
-                tx.update(info)
     else:
-        mp['transactions'] = []
+        mp['txs'] = []
     return mp
 
 
@@ -528,7 +546,7 @@ def show_ons(name, more_details=False):
                         network = b'\x73'
 
                     val = val[1:]
-                    keccak_hash = sha3.keccak_256()
+                    keccak_hash = keccak.new(digest_bits=256)
                     keccak_hash.update(network)
                     keccak_hash.update(val)
                     checksum = keccak_hash.digest()[0:4]
@@ -647,7 +665,7 @@ def parse_txs(txs_rpc):
 
     for tx in txs_rpc['txs']:
         if 'type' not in tx and 'as_json' in tx:
-            # Pre Oxen 11 crammed the details into "as_json" that we have to parse again
+            # Pre Oxen 11 scrammed the details into "as_json" that we have to parse again
             # We have serialized JSON data inside a field in the JSON, because of oxend's
             # multiple incompatible JSON generators 🤮:
             info = json.loads(tx["as_json"])
