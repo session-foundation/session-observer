@@ -67,7 +67,7 @@
         {% if info %}
             <h3 class="general_info info_list nowrap-spans">
                 <span><label>Height:</label> {{info.height}}</span>
-                <span><label>L2 Height:</label> {{info.l2_height}}</span>
+                <span><label>L2 Height:</label> {% if 'l2_height' in info%}{{info.l2_height}}{%else%}N/A{%endif%}</span>
                 <span><label>Hard fork:</label> v{{hf.version}}{%if 'revision' in hf%}.{{hf.revision}}{%endif%}</span>
                 {% if hf.version >= 16 %}
                     <span title="{{ info.pulse_target_timestamp | from_timestamp | format_datetime }}
