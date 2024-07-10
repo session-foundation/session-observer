@@ -27,12 +27,19 @@
 
             {% if info.mainnet and config.lokinet_mainnet_url %}
                 <span><a href="{{config.lokinet_mainnet_url}}">Connect via Lokinet</a></span>
+            {% elif info.stagenet and config.lokinet_stagenet_url %}
+                <span><a href="{{config.lokinet_stagenet_url}}">Connect via Lokinet</a></span>
             {% elif info.testnet and config.lokinet_testnet_url %}
                 <span><a href="{{config.lokinet_testnet_url}}">Connect via Lokinet</a></span>
             {% elif info.devnet and config.lokinet_devnet_url %}
                 <span><a href="{{config.lokinet_devnet_url}}">Connect via Lokinet</a></span>
             {% endif %}
 
+            {% if config.stagenet_url and not info.stagenet %}
+                <span><a href="{{config.stagenet_url}}">Go to stagenet explorer</a>
+                    {%if config.lokinet_stagenet_url%}(<a href="{{config.lokinet_stagenet_url}}">via Lokinet</a>){%endif%}
+                </span>
+            {% endif %}
             {% if config.testnet_url and not info.testnet %}
                 <span><a href="{{config.testnet_url}}">Go to testnet explorer</a>
                     {%if config.lokinet_testnet_url%}(<a href="{{config.lokinet_testnet_url}}">via Lokinet</a>){%endif%}
@@ -48,11 +55,6 @@
                     {%if config.lokinet_mainnet_url%}(<a href="{{config.lokinet_mainnet_url}}">via Lokinet</a>){%endif%}
                 </span>
             {% endif %}
-            {% if info.testnet %}
-                <span>This is <span style="color:#ff6b62; font-weight: bold">TESTNET</span> blockchain</span>
-            {% elif info.devnet %}
-                <span>This is <span style="color:#af5bd2; font-weight: bold">DEVNET</span> blockchain</span>
-            {% endif %}
         </div>
 
         <div class="TitleDivider"></div>
@@ -60,6 +62,7 @@
         {% if info %}
             <h3 class="general_info info_list nowrap-spans">
                 <span><label>Height:</label> {{info.height}}</span>
+                <span><label>L2 Height:</label> {% if 'l2_height' in info%}{{info.l2_height}}{%else%}N/A{%endif%}</span>
                 <span><label>Hard fork:</label> v{{hf.version}}{%if 'revision' in hf%}.{{hf.revision}}{%endif%}</span>
                 {% if hf.version >= 16 %}
                     <span title="{{ info.pulse_target_timestamp | from_timestamp | format_datetime }}
@@ -111,7 +114,7 @@
         <div class="TitleDivider"></div>
 
         <h4 class="tx-type-legend info_list nowrap-spans" style="margin-top: 0">
-            <span><label>TX Type Legend:</label> 🏁 Service Node Registration</span>
+            <span><label>TX Type Legend:</label> 🏁 Session Node Registration</span>
             <span>⚑ Contribution</span>
             <span>👍 Recommission</span>
             <span>👎 Decommission</span>

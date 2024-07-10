@@ -28,6 +28,7 @@ enable_mixins_details=True
 mainnet_url='https://oxen.observer'
 testnet_url='https://testnet.oxen.observer'
 devnet_url='https://devnet.oxen.observer'
+stagenet_url='https://stagenet.oxen.observer'
 
 # Same as above, but these apply if we are on a .loki URL:
 lokinet_mainnet_url='http://blocks.loki'

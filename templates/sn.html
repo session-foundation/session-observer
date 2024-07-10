@@ -9,12 +9,12 @@
 <div class="sn-details Wrapper">
   <div class="sn-details-main">
     <div class="details">
-      <h2>Service Node Details</h2>
+      <h2>Session Node Details</h2>
       <div class="TitleUnderliner"></div>
-      <h4 style="margin:5px"><label>Service Node Public Key:</label> {{sn.service_node_pubkey}}</h4>
+      <h4 style="margin:5px"><label>Session Node Public Key:</label> {{sn.service_node_pubkey}}</h4>
       {%if sn.pubkey_ed25519 %}
         {%if sn.pubkey_ed25519 != sn.service_node_pubkey%}
-          <h4 style="margin:5px"><label>Service Node Auxiliary Pubkey:</label> {{sn.pubkey_ed25519}}</h4>
+          <h4 style="margin:5px"><label>Session Node Auxiliary Pubkey:</label> {{sn.pubkey_ed25519}}</h4>
         {%endif%}
         <h4 style="margin:5px"><label>Lokinet Address:</label> {{sn.pubkey_ed25519 | base32z}}.snode</h4>
       {%endif%}
@@ -102,14 +102,14 @@
 
     {%set pulse_voted = sn.pulse_participation | selectattr("voted") | list | length%}
     {%set pulse_total = sn.pulse_participation | length%}
-    <span title="How many times the service node participated in Pulse block production from the last 8 blocks it was supposed to participate. (Service nodes may miss at most 4 before being decommissioned).">
+    <span title="How many times the session node participated in Pulse block production from the last 8 blocks it was supposed to participate. (Session nodes may miss at most 4 before being decommissioned).">
       <label{%if pulse_total >= 8 and pulse_voted < 4%} class="omg warning"{%endif%}>Pulse votes:</label>
       {{pulse_voted}} / {{pulse_total}}
     </span>
 
     {%set cp_voted = sn.checkpoint_participation | selectattr("voted") | list | length%}
     {%set cp_total = sn.checkpoint_participation | length%}
-    <span title="How many times the service node contributed a checkpoint vote from the last 8 blocks it was supposed to participate. (Service nodes may miss at most 4 before being decommissioned).">
+    <span title="How many times the session node contributed a checkpoint vote from the last 8 blocks it was supposed to participate. (Session nodes may miss at most 4 before being decommissioned).">
       <label{%if cp_total >= 8 and cp_voted < 4%} class="omg warning"{%endif%}>Checkpoint votes:</label>
       {{cp_voted}} / {{cp_total}}
     </span>
@@ -144,23 +144,23 @@
 
   </h4>
 
-  <h2>Service Node Status</h2>
+  <h2>Session Node Status</h2>
   <div class="TitleDivider"></div>
   {%if sn.active %}
     <p class="sn-active">Registered, staked, and active on the network since block {{sn.state_height}}.</p>
   {%elif sn.funded%}
-    <p class="sn-decomm"><span class="omg">Decommissioned</span>: this service node is
+    <p class="sn-decomm"><span class="omg">Decommissioned</span>: this session node is
     registered and staked, but is currently <span class="omg">decommissioned</span> (since block
-    {{sn.state_height}}) for failing to meet service node requirements.
+    {{sn.state_height}}) for failing to meet session node requirements.
     {%if sn.earned_downtime_blocks > 0%}
       If it does not return to active duty within {{sn.earned_downtime_blocks}} blocks (about
       {{(sn.earned_downtime_blocks * 120) | reltime(in_ago=false)}}) it will face <span class="omg">deregistration</span>.
     {%else%}
-      The decommission time has expired; service node <span class="omg">deregistration</span> is imminent.
+      The decommission time has expired; session node <span class="omg">deregistration</span> is imminent.
     {%endif%}
     </p>
   {%else%}
-    <p class="sn-awaiting">Awaiting registration.  This service node has <span class="oxen required">{{(sn.staking_requirement - sn.total_contributed) | oxen}}</span>
+    <p class="sn-awaiting">Awaiting registration.  This session node has <span class="oxen required">{{(sn.staking_requirement - sn.total_contributed) | oxen}}</span>
     remaining to be contributed.
     {%if sn.num_open_spots > 0%}
       {%set total_staked = sn.total_reserved if 'total_reserved' in sn else sn.total_contributed%}
@@ -171,11 +171,11 @@
 
   <p class="sn-expiration{%if sn.requested_unlock_height > 0%} unlocking{%endif%}">
     {%if sn.requested_unlock_height > 0%}
-      This service node is <span class="omg">scheduled to expire at block {{sn.requested_unlock_height}}</span>, in approximately
+      This session node is <span class="omg">scheduled to expire at block {{sn.requested_unlock_height}}</span>, in approximately
       {{((sn.requested_unlock_height - info.height + 1) * 120) | reltime(in_ago=false) }}
       ({{(server.timestamp + (sn.requested_unlock_height - info.height + 1) * 120) | from_timestamp | format_datetime('short')}} UTC, est.)
     {%else%}
-      This service node is staking infinitely: no unlock has been initiated by any of its contributors.
+      This session node is staking infinitely: no unlock has been initiated by any of its contributors.
     {%endif%}
   </p>
 

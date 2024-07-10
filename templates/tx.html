@@ -69,7 +69,7 @@
         <span><label>RingCT/RingCT Type:</label> {%if tx.version >= 2 and 'rct_signatures' in tx and not tx.coinbase%}Yes/{{tx.rct_signatures.type}}{%else%}No{%endif%}</span>
 
         {%if tx.coinbase and tx.extra.sn_winner%}
-          <span><label>Service Node Winner:</label>
+          <span><label>Session Node Winner:</label>
             {%if tx.extra.sn_winner == "0000000000000000000000000000000000000000000000000000000000000000"%}
               None
             {%else%}
@@ -86,14 +86,14 @@
             {%- set show_reasons = false -%}
             {% if tx.extra.sn_state_change.type == 'decom' -%}
                 {% set show_reasons = true -%}
-                👎 Service Node Decommission Metadata
+                👎 Session Node Decommission Metadata
             {% elif tx.extra.sn_state_change.type == 'recom' -%}
-                👍 Service Node Recommission Metadata
+                👍 Session Node Recommission Metadata
             {% elif tx.extra.sn_state_change.type == 'dereg' -%}
                 {% set show_reasons = true -%}
-                🚫 Service Node Deregistration Metadata
+                🚫 Session Node Deregistration Metadata
             {% elif tx.extra.sn_state_change.type == 'ip' -%}
-                📋 Service Node IP Change Metadata
+                📋 Session Node IP Change Metadata
             {% else -%}
                 ❓ Unknown State Change Metadata
             {% endif -%}
@@ -102,7 +102,7 @@
             <div class="TitleDivider"></div>
             {%set sn_index = tx.extra.sn_state_change.index%}
             {%if testing_quorum%}
-                <p class="state-change-pubkey">Service Node Public Key: <a href="/sn/{{testing_quorum.workers[sn_index]}}">{{testing_quorum.workers[sn_index]}}</a></p>
+                <p class="state-change-pubkey">Session Node Public Key: <a href="/sn/{{testing_quorum.workers[sn_index]}}">{{testing_quorum.workers[sn_index]}}</a></p>
             {%endif%}
 
             {%if show_reasons%}
@@ -136,9 +136,9 @@
                             {%for v in testing_quorum.validators%}
                                 <a
                                     {%if loop.index0 in voters%} class="sn voted" title="{{v}}
-This tx includes a verified vote by this testing service node."
+This tx includes a verified vote by this testing session node."
                                     {%else%} class="sn" title="{{v}}
-This tx does not includes a vote from this testing service node (only 7 votes are needed)."
+This tx does not includes a vote from this testing session node (only 7 votes are needed)."
                                     {%endif%}
                                     href="/sn/{{v}}">{{v}}</a>
                             {%endfor%}
@@ -154,14 +154,14 @@ This tx does not includes a vote from this testing service node (only 7 votes ar
                 </div>
             {%else%}
                 <div title="This quorum information is no longer available (only recent quorum data is stored)">
-                    <p>Service Node Index: {{sn_index}}</p>
+                    <p>Session Node Index: {{sn_index}}</p>
                     <p>Testing quorum: {{tx.extra.sn_state_change.height}}</a></p>
                 </div>
             {%endif%}
 
         {% elif tx.type == 2 %}
-            <h2>🔓 Service Node Unlock</h2>
-            <p class="unlock-pubkey"><label>Service Node Public Key:</label> <a href="/sn/{{tx.extra.sn_pubkey}}">{{tx.extra.sn_pubkey}}</a></p>
+            <h2>🔓 Session Node Unlock</h2>
+            <p class="unlock-pubkey"><label>Session Node Public Key:</label> <a href="/sn/{{tx.extra.sn_pubkey}}">{{tx.extra.sn_pubkey}}</a></p>
             <p><label>Unlock key image:</label> {{unlock_key_image}}</p> {# FIXME #}
             <p><label>Unlock signature:</label> {{unlock_signature}}</p> {# FIXME #}
         {% elif tx.type == 4 and 'lns' in tx.extra %}
@@ -172,9 +172,9 @@ This tx does not includes a vote from this testing service node (only 7 votes ar
             {% endif %}
             {#FIXME - show some metadata?#}
         {% elif 'sn_registration' in tx.extra %}
-            <h2>🏁 Service Node Register Metadata</h2>
+            <h2>🏁 Session Node Register Metadata</h2>
             <div class="TitleDivider"></div>
-            <p><label>Service Node Public Key:</label> <a href="/sn/{{tx.extra.sn_pubkey}}">{{tx.extra.sn_pubkey}}</a></p>
+            <p><label>Session Node Public Key:</label> <a href="/sn/{{tx.extra.sn_pubkey}}">{{tx.extra.sn_pubkey}}</a></p>
             <p><label>Operator fee:</label>
             {%if tx.extra.sn_registration.contributors[0].portion == 1000000%}N/A (solo registration)
             {%else%}{{(tx.extra.sn_registration.fee / 10000) | chop0}}%
@@ -187,7 +187,7 @@ This tx does not includes a vote from this testing service node (only 7 votes ar
               <p><label>Registration Hardfork:</label> {{tx.extra.sn_registration.hardfork}}</p>
             {%endif%}
 
-            <h2>Service Node Registration Address(es)</h2>
+            <h2>Session Node Registration Address(es)</h2>
             <div class="TitleDivider"></div>
             <table class="Table">
                 <thead>
@@ -207,11 +207,53 @@ This tx does not includes a vote from this testing service node (only 7 votes ar
                 </tbody>
             </table>
         {% elif 'sn_contributor' in tx.extra %}
-            <h2>⚑ Service Node Contribution</h2>
+            <h2>⚑ Session Node Contribution</h2>
             <div class="TitleDivider"></div>
-            <p><label>Service Node Public Key:</label> {{tx.extra.sn_pubkey}}</p>
+            <p><label>Session Node Public Key:</label> {{tx.extra.sn_pubkey}}</p>
             <p><label>Contributor Address:</label> {{tx.extra.sn_contributor}}</p>
             <p><label>Contribution Amount:</label> {%if 'stake_amount' in tx%}{{tx.stake_amount | oxen}}{%else%}???{%endif%}</p>
+        {% elif 'type' in tx.extra %}
+            {% if tx.extra.type == 'ethereum_service_node_deregister' %}
+                <h2>Session Node Deregister</h2>
+                <p><label>BLS Public Key:</label> {{tx.extra.bls_pubkey}}</p>
+            {% elif tx.extra.type == 'ethereum_service_node_exit' %}
+                <h2>Session Node Exit Request</h2>
+                <p><label>BLS Public Key:</label> {{tx.extra.bls_pubkey}}</p>
+                <p><label>Ethereum Address:</label> {{tx.extra.eth_address}}</p>
+                <p><label>Contribution Amount:</label> {{tx.extra.amount}}</p>
+            {% elif tx.extra.type == 'ethereum_service_node_leave_request' %}
+                <h2>Session Node Leave Request</h2>
+                <p><label>BLS Public Key:</label> {{tx.extra.bls_pubkey}}</p>
+            {% elif tx.extra.type == 'ethereum_new_service_node' %}
+                <h2>Session Node Register Metadata</h2>
+                <p><label>Session Node Public Key:</label> {{tx.extra.service_node_pubkey}}</p>
+                <p><label>BLS Public Key:</label> {{tx.extra.bls_pubkey}}</p>
+                <p><label>Ethereum Address:</label> {{tx.extra.eth_address}}</p>
+                <p><label>Operator fee:</label>
+                {%if tx.extra.contributors|length == 0%}N/A (solo registration)
+                {%else%}{{(tx.extra.fee / 10000) | chop0}}%
+                {%endif%}</p>
+
+                <h2>Session Node Registration Address(es)</h2>
+                <div class="TitleDivider"></div>
+                <table class="Table">
+                    <thead>
+                        <tr>
+                            <td>Ethereum Address</td>
+                            <td>Amount</td>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {%for c in tx.extra.contributors%}
+                            <tr>
+                                <td>{{c.address}}</td>
+                                <td>{{c.amount}}</td>
+                            </tr>
+                        {%endfor%}
+                    </tbody>
+                </table>
+            {% endif %}
         {% endif %}
     {% endif %}
 

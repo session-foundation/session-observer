@@ -317,8 +317,11 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None)
     # We have some chained request dependencies here and below, so get() them as needed; all other
     # non-dependent requests should already have a future initiated above so that they can
     # potentially run in parallel.
-    info = inforeq.get()
-    height = info['height']
+    info             = inforeq.get()
+    height           = info['height']
+    info['testnet']  = info['nettype'] == 'testnet'
+    info['stagenet'] = info['nettype'] == 'stagenet'
+    info['devnet']   = info['nettype'] == 'devnet'
 
     # Permalinked block range:
     if first is not None and last is not None and 0 <= first <= last and last <= first + 99:
