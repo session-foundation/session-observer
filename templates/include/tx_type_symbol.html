@@ -38,7 +38,7 @@
                 <span class="icon" title="Session Node leave request">🚫{%if text%} leave request{%endif%}</span>
             {% elif tx.extra.type == 'ethereum_new_service_node' %}
                 <span class="icon" title="Session Node registration
-                             {%-if len(tx.extra.contributors) == 1%} (solo)
+                             {%-if tx.extra.contributors|length == 1%} (solo)
                              {%-else%} ({{tx.extra.fee / 10000}}% fee)
                              {%-endif%}
                              {{tx.extra.service_node_pubkey}}

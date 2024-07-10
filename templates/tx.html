@@ -230,7 +230,7 @@ This tx does not includes a vote from this testing session node (only 7 votes ar
                 <p><label>BLS Public Key:</label> {{tx.extra.bls_pubkey}}</p>
                 <p><label>Ethereum Address:</label> {{tx.extra.eth_address}}</p>
                 <p><label>Operator fee:</label>
-                {%if len(tx.extra.contributors) == 0%}N/A (solo registration)
+                {%if tx.extra.contributors|length == 0%}N/A (solo registration)
                 {%else%}{{(tx.extra.fee / 10000) | chop0}}%
                 {%endif%}</p>
 
