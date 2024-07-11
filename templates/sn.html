@@ -93,13 +93,6 @@
       {%endif%}
     </span>
 
-    {%if info.service_node%}{# SN tests are only conducted by SNs #}
-      {% import 'include/reachable.html' as reachable %}
-
-      {{reachable.display(sn)}}
-      {{reachable.display(sn, true)}}
-    {%endif%}
-
     {%set pulse_voted = sn.pulse_participation | selectattr("voted") | list | length%}
     {%set pulse_total = sn.pulse_participation | length%}
     <span title="How many times the session node participated in Pulse block production from the last 8 blocks it was supposed to participate. (Session nodes may miss at most 4 before being decommissioned).">
