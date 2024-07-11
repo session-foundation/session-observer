@@ -77,14 +77,14 @@
                     <span><label>Network difficulty:</label> {{info.difficulty}}</span>
                     <span><label>Hash rate:</label> ~{{(info.difficulty / info.target) | si }}H/s</span>
                 {% endif %}
-                <span><label>Staking requirement:</label> {{stake.staking_requirement | oxen}}</span>
-                <span title="{{(2500 * fees.fee_per_byte + 2*fees.fee_per_output) | oxen}} for a typical simple transaction (~2.5kB, 2 outputs)">
+                <span><label>Staking requirement:</label> {{stake.staking_requirement | cash}}</span>
+                <span title="{{(2500 * fees.fee_per_byte + 2*fees.fee_per_output) | cash(tag_name='OXEN')}} for a typical simple transaction (~2.5kB, 2 outputs)">
                     <label>Base fee:</label>
-                    {{fees.fee_per_output | oxen}}/output + {{(fees.fee_per_byte * 1000) | oxen}}/kB
+                    {{fees.fee_per_output | cash(tag_name='OXEN')}}/output + {{(fees.fee_per_byte * 1000) | cash(tag_name='OXEN')}}/kB
                 </span>
-                <span title="{{(2500 * fees.blink_fee_per_byte + 2*fees.blink_fee_per_output) | oxen}} for a typical simple blink transaction (~2.5kB, 2 outputs)">
+                <span title="{{(2500 * fees.blink_fee_per_byte + 2*fees.blink_fee_per_output) | cash(tag_name='OXEN')}} for a typical simple blink transaction (~2.5kB, 2 outputs)">
                     <label>Blink fee:</label>
-                    {{fees.blink_fee_per_output | oxen}}/output + {{(fees.blink_fee_per_byte * 1000) | oxen}}/kB
+                    {{fees.blink_fee_per_output | cash(tag_name='OXEN')}}/output + {{(fees.blink_fee_per_byte * 1000) | cash(tag_name='OXEN')}}/kB
                 </span>
                 <span title="{{(info.block_size_limit / 2) | si}}B soft limit, {{info.block_size_limit | si}}B hard limit. Blocks may include TXes up to the soft limit without penalty and incur increasing reward penalties as they approach the hard limit.">
                     <label>Block size limit:</label>
@@ -99,11 +99,11 @@
                 {% if not emission or emission.status == 'BUSY' %}
                     (still calculating...)</span>
                 {% elif emission.status == 'OK' %}
-                    {{(emission.emission_amount - emission.burn_amount) | oxen}}</span>
-                <span title="Gross emitted coins"><label>(Coinbase:</label> {{emission.emission_amount | oxen}}</span>
-                <span title="Transfers paid as transaction fees"><label>Fees:</label> {{emission.fee_amount | oxen}}</span>
-                <span title="Permanently destroyed (&quot;burned&quot;) fees"><label>Burned:</label> {{emission.burn_amount | oxen}}</span>
-                <span title="Accrued batch rewards not yet paid out"><label>Batched:</label> {{accrued_total | oxen}}</span><label>).</label>
+                    {{(emission.emission_amount - emission.burn_amount) | cash(tag_name='OXEN')}}</span>
+                <span title="Gross emitted coins"><label>(Coinbase:</label> {{emission.emission_amount | cash(tag_name='OXEN')}}</span>
+                <span title="Transfers paid as transaction fees"><label>Fees:</label> {{emission.fee_amount | cash(tag_name='OXEN')}}</span>
+                <span title="Permanently destroyed (&quot;burned&quot;) fees"><label>Burned:</label> {{emission.burn_amount | cash(tag_name='OXEN')}}</span>
+                <span title="Accrued batch rewards not yet paid out"><label>Batched:</label> {{accrued_total | cash}}</span><label>).</label>
                 {%endif%}
             <p style="padding: 0px; margin-top: 2px; font-size: 0.9em">
             * — The circulating supply may exclude any currently publicised locked OXEN; otherwise it is equal to the coinbase minus the number of burned coins.
@@ -179,7 +179,7 @@
                   <td>{{symbol.display(b.txs[0])}}</td>
                   <td><a href="/tx/{{b.txs[0].tx_hash}}">{{b.txs[0].tx_hash}}</a></td>
                   <td>{{fee.display(b.txs[0])}}</td>
-                  <td>{{b.coinbase_payouts | oxen(tag=False, fixed=True, decimals=2)}}</td>
+                  <td>{{b.coinbase_payouts | cash(tag=False, fixed=True, decimals=2)}}</td>
                   <td>0/{{b.txs[0].vout | length}}</td>
                   <td>{{b.txs[0].size | si}}</td>
                 </tr>

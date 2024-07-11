@@ -46,7 +46,7 @@
       <a href="/block/{{sn.state_height}}">{{sn.state_height}}</a>
     </span>
 
-    <span><label>Staking requirement:</label> {{sn.staking_requirement | oxen}}</span>
+    <span><label>Staking requirement:</label> {{sn.staking_requirement | cash}}</span>
 
     {%if not solo_node%}
       <span><label>Operator fee:</label> {{(sn.portions_for_operator / portions_base * 100) | round(3) | chop0}}%</span>
@@ -55,12 +55,12 @@
     <span><label>Total contributed:</label>
       {%if sn.total_contributed >= sn.staking_requirement%}100%
       {%else%} 
-      {{sn.total_contributed | oxen}} ({{(sn.total_contributed / sn.staking_requirement * 100) | round(2) | chop0}}%)
+      {{sn.total_contributed | cash}} ({{(sn.total_contributed / sn.staking_requirement * 100) | round(2) | chop0}}%)
       {%endif%}
     </span>
 
     {%if 'total_reserved' in sn and sn.total_reserved != sn.total_contributed%}
-      <span><label>Reserved stakes:</label> {{(sn.total_reserved - sn.total_contributed) | oxen}}</span>
+      <span><label>Reserved stakes:</label> {{(sn.total_reserved - sn.total_contributed) | cash}}</span>
     {%endif%}
 
     <span>
@@ -92,13 +92,6 @@
         <span title="{{sn.last_uptime_proof|from_timestamp|format_datetime}}">{{sn.last_uptime_proof | from_timestamp | ago}} ago</span>
       {%endif%}
     </span>
-
-    {%if info.service_node%}{# SN tests are only conducted by SNs #}
-      {% import 'include/reachable.html' as reachable %}
-
-      {{reachable.display(sn)}}
-      {{reachable.display(sn, true)}}
-    {%endif%}
 
     {%set pulse_voted = sn.pulse_participation | selectattr("voted") | list | length%}
     {%set pulse_total = sn.pulse_participation | length%}
@@ -160,11 +153,11 @@
     {%endif%}
     </p>
   {%else%}
-    <p class="sn-awaiting">Awaiting registration.  This session node has <span class="oxen required">{{(sn.staking_requirement - sn.total_contributed) | oxen}}</span>
+    <p class="sn-awaiting">Awaiting registration.  This session node has <span class="oxen required">{{(sn.staking_requirement - sn.total_contributed) | cash}}</span>
     remaining to be contributed.
     {%if sn.num_open_spots > 0%}
       {%set total_staked = sn.total_reserved if 'total_reserved' in sn else sn.total_contributed%}
-      The minimum required stake contribution is <span class="oxen required">{{((sn.staking_requirement - total_staked) / sn.num_open_spots) | oxen}}</span>.
+      The minimum required stake contribution is <span class="oxen required">{{((sn.staking_requirement - total_staked) / sn.num_open_spots) | cash}}</span>.
     {%endif%}
     </p>
   {%endif%}
@@ -195,12 +188,12 @@
         {%for c in sn.contributors%}
           <tr>
             <td>{{c.address}}</td>
-            <td>{{c.amount | oxen}}
+            <td>{{c.amount | cash}}
               {%-if c.locked_contributions and c.locked_contributions|length > 1%}
                 ({{c.locked_contributions|length}} contributions)
               {%endif-%}
             </td>
-            <td>{{(c.reserved if 'reserved' in c else c.amount) | oxen}}</td>
+            <td>{{(c.reserved if 'reserved' in c else c.amount) | cash}}</td>
           </tr>
         {%endfor%}
       </tbody>

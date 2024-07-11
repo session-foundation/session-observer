@@ -124,8 +124,8 @@ def format_si(value):
         i += 1
     return filter_round(value) + '{}'.format(si_suffix[i])
 
-@app.template_filter('oxen')
-def format_oxen(atomic, tag=True, fixed=False, decimals=9, zero=None):
+@app.template_filter('cash')
+def format_oxen(atomic, tag_name='SENT', tag=True, fixed=False, decimals=9, zero=None):
     """Formats an atomic current value as a human currency value.
     tag - if False then don't append " OXEN"
     fixed - if True then don't strip insignificant trailing 0's and '.'
@@ -139,7 +139,7 @@ def format_oxen(atomic, tag=True, fixed=False, decimals=9, zero=None):
         if not fixed and decimals > 0:
             disp = disp.rstrip('0').rstrip('.')
     if tag:
-        disp += ' OXEN'
+        disp += ' ' + tag_name
     return disp
 
 # For some inexplicable reason some hex fields are provided as array of byte integer values rather
