@@ -138,13 +138,13 @@
             <a class="linked-icon" href="/range/{{blocks[0].height}}/{{blocks[-1].height}}" title="Permanent link to this block range">🔗</a>
         </h2>
 
-        {% set block_sizes = blocks | map(attribute='block_size') | sort %}
-        {%if block_sizes|count > 0%}
-          <h4 class="Subtitle">(Min. / Median / Average / Max. size of these blocks:
-            {{block_sizes[0] | si}}B /
-            {{(block_sizes[(block_sizes|count-1)//2]/2 + block_sizes[(block_sizes|count)//2]/2) | si}}B /
-            {{(block_sizes|sum / block_sizes|count) | si}}B /
-            {{block_sizes[-1] | si}}B)
+        {% set block_weights = blocks | map(attribute='block_weight') | sort %}
+        {%if block_weights|count > 0%}
+          <h4 class="Subtitle">(Min. / Median / Average / Max. weights of these blocks:
+            {{block_weights[0] | si}}B /
+            {{(block_weights[(block_weights|count-1)//2]/2 + block_weights[(block_weights|count)//2]/2) | si}}B /
+            {{(block_weights|sum / block_weights|count) | si}}B /
+            {{block_weights[-1] | si}}B)
           </h4>
         {%endif%}
         <div class="TitleUnderliner"></div>

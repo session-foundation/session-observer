@@ -329,6 +329,8 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None)
         if end_height - start_height + 1 != per_page:
             per_page = end_height - start_height + 1;
             custom_per_page = '/{}'.format(per_page)
+        if start_height > height:
+            flask.abort(404)
         # We generally can't get a perfect page number because our range (e.g. 5-14) won't line up
         # with pages (e.g. 10-19, 0-19), so just get as close as we can.  Next/Prev page won't be
         # quite right, but they'll be within half a page.
@@ -692,7 +694,9 @@ def get_block_txs_future(omq, oxend, block):
     if 'info' not in block:
         try:
             block['info'] = json.loads(block["json"])
-            del block['info']['miner_tx']  # Doesn't include enough for us, we fetch it separately with extra interpretation instead
+            if 'miner_tx' in block['info']:
+                # Doesn't include enough for us, we fetch it separately with extra interpretation instead
+                del block['info']['miner_tx']
             del block["json"]
         except Exception as e:
             print("Something getting wrong: cannot parse block json for block {}: {}".format(block_height, e), file=sys.stderr)

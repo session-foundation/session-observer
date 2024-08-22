@@ -33,7 +33,8 @@
 
         <span><label>Major/minor version:</label> {{block_header.major_version}}.{{block_header.minor_version}}</span>
 
-        <span><label>Block size:</label> {{block_header.block_size | si}}B</span>
+        <span><label>Block size:</label> {{block_header.block_size | si}}B
+            ({{(block_header.block_size - block_header.block_weight) | si}}B block + {{block_header.block_weight | si}}B txs)</span>
 
         {%if 'nonce' in block_header and block_header['nonce'] != 0%}
             <span title="Miner nonce: {{block_header.nonce}}"><label>Block type:</label> Mined ⛏</span>
