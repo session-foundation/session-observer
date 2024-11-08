@@ -29,13 +29,12 @@
 <div id="header" class="Wrapper">
     {% block header %}
     <div id="header-content">
-        <h1 class="Header">
-            <a href="/">Session
-                {%if info and info.testnet%}
+        <h1 class="Header"><a href="/">Session
+                {%if info and info.nettype == "testnet"%}
                     <span style="color:#ff6b62">Testnet</span>
-                {%elif info and info.devnet%}
+                {%elif info and info.nettype == "devnet"%}
                     <span style="color:#af5bd2">Devnet</span>
-                {%elif info and info.stagenet%}
+                {%elif info and info.nettype == "stagenet"%}
                     <span style="color:#32cd32">Stagenet</span>
                 {%endif%}
                 Observer
