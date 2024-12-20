@@ -66,7 +66,7 @@
         <span title="{{tx.size}} bytes"><label>TX Size:</label> {{tx.size|si}}B</span>
 
         <span><label>No. Confirmations:</label> {%if 'block_height' in tx%}{{info.height - tx.block_height}}{%else%}None (in mempool){%endif%}</span>
-        <span><label>RingCT/RingCT Type:</label> {%if tx.version >= 2 and 'rct_signatures' in tx and not tx.coinbase%}Yes/{{tx.rct_signatures.type}}{%else%}No{%endif%}</span>
+        <span><label>Ring/Ring Type:</label> {%if tx.version >= 2 and 'rct_signatures' in tx and not tx.coinbase%}Yes/{{tx.rct_signatures.type}}{%else%}No{%endif%}</span>
 
         {%if tx.coinbase and tx.extra.sn_winner%}
           <span><label>Session Node Winner:</label>
@@ -277,7 +277,7 @@ This tx does not includes a vote from this testing session node (only 7 votes ar
                     {%for out in tx.vout%}
                         <tr>
                             <td><label>{{loop.index0}}:</label> {{out.target.key}}</td>
-                            <td>{{out.amount | cash(tag_name='OXEN', zero='?')}}</td>
+                            <td>{%if out.amount > 0 %}{{out.amount | cash(tag_name='SENT', zero='?')}}{%endif%}</td>
                             <td>{%if 'output_indices' in tx%}{{tx.output_indices[loop.index0]}}{# FIXME: of {{num_outputs}}#}{%endif%}</td>
                         </tr>
                     {%endfor%}
@@ -634,7 +634,7 @@ This tx does not includes a vote from this testing session node (only 7 votes ar
             </tr>
             {%if config.enable_mixins_details%}
               <tr class="TableHeader">
-                <td>Ring Members</td>
+                <td>Transaction Members</td>
                 {%if have_raw_tx%}
                   <td>Is It Real?</td>
                 {%endif%}
@@ -706,7 +706,7 @@ This tx does not includes a vote from this testing session node (only 7 votes ar
             <a href="/tx/{{tx_hash}}/1">More Details</a>
             {%if enable_as_hex%}
               | <a href="/txhex/{{tx_hash}}">TX As Hex</a>
-              | <a href="/ringmembershex/{{tx_hash}}">TX Ring Members As Hex</a>
+              | <a href="/ringmembershex/{{tx_hash}}">TX Members As Hex</a>
             {%endif%}
           </h5>
         {%endif%}

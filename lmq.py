@@ -15,6 +15,17 @@ def omq_connection():
         oxend = omq.connect_remote(config.oxend_rpc)
     return (omq, oxend)
 
+smq, sessiond = None, None
+def smq_connection():
+    global smq, sessiond
+    if smq is None:
+        smq = oxenmq.OxenMQ(log_level=oxenmq.LogLevel.warn)
+        smq.max_message_size = 200*1024*1024
+        smq.start()
+    if sessiond is None:
+        sessiond = smq.connect_remote(config.sessiond_rpc)
+    return (smq, sessiond)
+
 cached = {}
 cached_args = {}
 cache_expiry = {}

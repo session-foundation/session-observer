@@ -14,11 +14,11 @@
             {% endif -%}
         {% elif tx.type == 2 -%}
             <span class="icon" title="Session Node stake unlock — {{tx.extra.sn_pubkey}}">🔓{%if text%} unlock{%endif%}</span>
-        {% elif tx.type == 4 and 'ons' in tx.extra -%}
+        {% elif tx.type == 4 and 'sns' in tx.extra -%}
             {% if 'buy' in tx.extra.ons -%}
-                <span class="icon" title="Oxen Name Service Buying">🎫{%if text%} LNS purchase{%endif%}</span>
+                <span class="icon" title="Session Name Service Buying">🎫{%if text%} LNS purchase{%endif%}</span>
             {% elif 'update' in tx.extra.ons -%}
-                <span class="icon" title="Oxen Name Service Updating">💾{%if text%} LNS update{%endif%}</span>
+                <span class="icon" title="Session Name Service Updating">💾{%if text%} LNS update{%endif%}</span>
             {% endif -%}
         {% elif 'sn_registration' in tx.extra -%}
             <span class="icon" title="Session Node registration
@@ -33,9 +33,9 @@
             {% if tx.extra.type == 'ethereum_service_node_deregister' %}
                 <span class="icon" title="Session Node deregistration">🚫{%if text%} deregistration{%endif%}</span>
             {% elif tx.extra.type == 'ethereum_service_node_exit' %}
-                <span class="icon" title="Session Node exit">🚫{%if text%} exit{%endif%}</span>
+                <span class="icon" title="Session Node stake exit">🔓{%if text%} stake exit{%endif%}</span>
             {% elif tx.extra.type == 'ethereum_service_node_leave_request' %}
-                <span class="icon" title="Session Node leave request">🚫{%if text%} leave request{%endif%}</span>
+                <span class="icon" title="Session Node stake exit request">🔑{%if text%} stake exit request{%endif%}</span>
             {% elif tx.extra.type == 'ethereum_new_service_node' %}
                 <span class="icon" title="Session Node registration
                              {%-if tx.extra.contributors|length == 1%} (solo)

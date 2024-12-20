@@ -3,7 +3,7 @@
 {% elif mempool_limit is none %}{% set mempool_limit = mempool.txs|length %}
 {% endif %}
 <div class="Wrapper">
-    <h2 style="margin-bottom: 0px"> Transaction Pool</h2>
+    <h2 style="margin-bottom: 0px">Session Appchain Transaction Pool</h2>
 
     <h4 class="Subtitle">{{mempool.txs|length}} transactions,
         {{mempool.txs|sum(attribute='size') | si}}B</h4>

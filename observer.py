@@ -103,6 +103,16 @@ def relative_time(seconds, two_part=False, in_ago=True, neg_is_now=False):
 
     return delta if not in_ago else delta + ' ago' if ago else 'in ' + delta
 
+# NOTE: Arbitrum averages 4 blocks per second
+@app.template_filter('arbitrum_time_estimate')
+def arbitrum_time_estimate(event_block, current_block, current_block_time):
+    if current_block_time is None or event_block is None:
+        return None
+
+    block_diff = event_block - current_block
+    seconds_diff = block_diff /4
+
+    return current_block_time + seconds_diff
 
 @app.template_filter('roundish')
 def filter_round(value):
@@ -138,9 +148,16 @@ def format_oxen(atomic, tag_name='SENT', tag=True, fixed=False, decimals=9, zero
         disp = "{{:.{}f}}".format(decimals).format(atomic * 1e-9)
         if not fixed and decimals > 0:
             disp = disp.rstrip('0').rstrip('.')
+
     if tag:
         disp += ' ' + tag_name
     return disp
+
+@app.template_filter('percent')
+def percent(num, total, decimals=2):
+    if total == 0:
+        return "N/A"
+    return "{:.{}f}%".format((num / total) * 100, decimals)
 
 # For some inexplicable reason some hex fields are provided as array of byte integer values rather
 # than hex.  This converts such a monstrosity to hex.
@@ -162,6 +179,17 @@ def ellipsize(string, leading=10, trailing=5, ellipsis='...'):
         return string
     return string[0:leading] + ellipsis + ('' if not trailing else string[-trailing:])
 
+@app.template_filter('explorer_link_tx')
+def explorer_link_tx(tx_hash):
+    return config.arbitrum_explorer_base_url + '/tx/' + tx_hash
+
+@app.template_filter('explorer_link_block')
+def explorer_link_block(block_number):
+    return config.arbitrum_explorer_base_url + '/block/' + str(block_number)
+
+@app.template_filter('explorer_link_address')
+def explorer_link_address(address):
+    return config.arbitrum_explorer_base_url + '/address/' + address
 
 @app.after_request
 def add_global_headers(response):
@@ -271,6 +299,21 @@ def parse_mempool(mempool_future):
         mp['txs'] = []
     return mp
 
+def get_contract_addresses():
+    res = requests.get(config.staking_backend_api_url + "/contract/addresses/core").json()
+    addresses = res.get("addresses")
+    return { **{x['name']: x['address'] for x in addresses} }
+
+def get_arbitrum_events_paginated(count_limit=500, skip=0):
+    res = requests.get(config.staking_backend_api_url + "/events/" + str(count_limit) + "/" + str(skip)).json()
+    events = res.get("events")
+    if events is None:
+        return []
+    return events, res.get("pagination")
+
+def get_arbitrum_info():
+    res = requests.get(config.staking_backend_api_url + "/arbitrum-info").json()
+    return res.get("info")
 
 @app.context_processor
 def template_globals():
@@ -287,12 +330,16 @@ def template_globals():
 
 @app.route('/page/<int:page>')
 @app.route('/page/<int:page>/<int:per_page>')
+@app.route('/event-page/<int:event_page>')
+@app.route('/event-page/<int:event_page>/<int:per_event_page>')
 @app.route('/range/<int:first>/<int:last>')
 @app.route('/autorefresh/<int:refresh>')
 @app.route('/v<int:style>') # debug while mucking with stylesheets
 @app.route('/')
-def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None):
+def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None, event_page=0, per_event_page=None):
     omq, oxend = omq_connection()
+    smq, sessiond = smq_connection()
+
     inforeq = FutureJSON(omq, oxend, 'rpc.get_info', 1)
     stake = FutureJSON(omq, oxend, 'rpc.get_staking_requirement', 10)
     base_fee = FutureJSON(omq, oxend, 'rpc.get_fee_estimate', 10)
@@ -314,6 +361,12 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None)
     else:
         custom_per_page = '/{}'.format(per_page)
 
+    custom_per_event_page = ''
+    if per_event_page is None or per_event_page <= 0 or per_event_page > config.max_blocks_per_page:
+        per_event_page = config.blocks_per_page
+    else:
+        custom_per_event_page = '/{}'.format(per_event_page)
+
     # We have some chained request dependencies here and below, so get() them as needed; all other
     # non-dependent requests should already have a future initiated above so that they can
     # potentially run in parallel.
@@ -322,6 +375,8 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None)
     info['testnet']  = info['nettype'] == 'testnet'
     info['stagenet'] = info['nettype'] == 'stagenet'
     info['devnet']   = info['nettype'] == 'devnet'
+
+    info_sd          = inforeq_sd.get().get('block_header')
 
     # Permalinked block range:
     if first is not None and last is not None and 0 <= first <= last and last <= first + 99:
@@ -344,6 +399,8 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None)
         'end_height': end_height,
         'get_tx_hashes': True,
         }).get()['headers']
+
+    arbitrum_events, arbitrum_events_pagination = get_arbitrum_events_paginated(count_limit=min(per_event_page,config.max_blocks_per_page), skip=event_page*per_event_page)
 
     # If 'txs' is already there then it is probably left over from our cached previous call through
     # here.
@@ -380,8 +437,11 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None)
             sum(amt for wallet, amt in accrued['balances'].items()) if 'balances' in accrued else
             sum(accrued['amounts']))
 
+    arbitrum_addresses = get_contract_addresses()
+
     return flask.render_template('index.html',
             info=info,
+            info_sd=info_sd,
             stake=stake.get(),
             fees=base_fee.get(),
             emission=coinbase.get(),
@@ -392,10 +452,16 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None)
             inactive_sns=inactive_sns,
             awaiting_sns=awaiting_sns,
             blocks=blocks,
+            arbitrum_events=arbitrum_events,
+            arbitrum_events_pagination=arbitrum_events_pagination,
+            arbitrum_addresses=arbitrum_addresses,
             block_size_median=statistics.median(b['block_size'] for b in blocks),
             page=page,
             per_page=per_page,
+            event_page=event_page,
+            per_event_page=per_event_page,
             custom_per_page=custom_per_page,
+            custom_per_event_page=custom_per_event_page,
             mempool=parse_mempool(mempool),
             checkpoints=checkpoints.get(),
             refresh=refresh,

@@ -1,0 +1,26 @@
+{%- macro display_event(event, text=false) -%}
+    <div class="tooltip">
+        {% if event.name == 'NewServiceNodeV2' -%}
+            <span class="icon">🏁{%if text%} registration{%endif%}</span>
+            <span class="tooltip-text">Session Node registration</span>
+        {% elif event.name == 'ServiceNodeExitRequest' -%}
+            <span class="icon">🔑{%if text%} stake exit request{%endif%}</span>
+            <span class="tooltip-text">Session Node stake exit request</span>
+        {% elif event.name == 'ServiceNodeExit' -%}
+            <span class="icon">🔓{%if text%} stake exit{%endif%}</span>
+            <span class="tooltip-text">Session Node stake exit</span>
+        {% elif event.name == 'ServiceNodeLiquidated' -%}
+            <span class="icon">🧹{%if text%} stake liquidation{%endif%}</span>
+            <span class="tooltip-text">Session Node stake liquidation</span>
+        {% elif event.name == 'NewServiceNodeContributionContract' -%}
+            <span class="icon">📜{%if text%} multicontributor contract deploy{%endif%}</span>
+            <span class="tooltip-text">Session Node Multicontributor Contract Deploy</span>
+        {% elif event.name == 'RewardsClaimed' -%}
+            <span class="icon">🎁{%if text%} claim rewards{%endif%}</span>
+            <span class="tooltip-text">Claim Rewards</span>
+        {% else -%}
+            <span class="icon">❓{%if text%} unknown event {{ event.name }}{%endif%}</span>
+            <span class="tooltip-text">Unknown Arbitrum event {{ event.name }}</span>
+        {% endif -%}
+    </div>
+{% endmacro -%}

@@ -1,0 +1,31 @@
+<div class="pages" class="center" style="text-align: center;">
+  {% set event_top_page = arbitrum_events_pagination.total // per_event_page %}
+  {% if event_page > 0 %}
+    <a href="/event-page/{{event_page - 1}}{{custom_per_event_page}}#arb-tx">
+      <div class="PageButton">Prev</div>
+    </a>
+  {% else %}
+    <div class="PageButton disabled">Prev</div>
+  {% endif %}
+  <div class="PageButton">
+    Current Page: <a title="Return to current events" href="/{%if custom_per_event_page%}event-page/0{{custom_per_event_page}}#arb-tx{%endif%}">{{event_page}}</a>/<a href="/event-page/{{event_top_page}}{{custom_per_event_page}}#arb-tx">{{event_top_page}}</a>
+  </div>
+
+  {%if event_page < event_top_page%}
+    <a href="/event-page/{{event_page + 1}}{{custom_per_event_page}}#arb-tx">
+      <div class="PageButton">Next</div>
+    </a>
+  {% else %}
+    <div class="PageButton disabled">Next</div>
+  {% endif %}
+
+  <div class="PaginationControl">
+  {% set per_event_page_options = [5, 10, 20, 25, 50, 100, 500] %}
+  {% if not per_event_page in per_event_page_options %}
+    {{ '' if per_event_page_options.append(per_event_page) }}
+  {% endif %}
+  Showing <select onchange="window.location.href = '/event-page/0/' + this.value + '#arb-tx'">
+    {% for p in per_event_page_options | sort %}<option{%if p == per_event_page%} selected="selected"{%endif%}>{{p}}</option>{% endfor %}
+  </select> events/page
+  </div>
+</div>

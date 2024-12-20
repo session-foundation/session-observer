@@ -1,11 +1,11 @@
 {% extends "_basic.html" %}
-
+{% import "components/tooltip.html" as components %}
 {% block content %}
     <div class="Wrapper">
 
         <div class="info_list nowrap-spans">
             <span><label>Server Time:</label> {{ server.datetime | format_datetime }}</span>
-            <span><a href="/txpool">Transaction Pool</a></span>
+            <span><a href="/txpool">Session Appchain Transaction Pool</a></span>
             {% if config.pusher %}
                 <span><a href="/rawtx">Transaction pusher </a></span>
             {% endif %}
@@ -24,37 +24,6 @@
                     {% endif %}
                 </span>
             {% endif %}
-
-            {% if info.mainnet and config.lokinet_mainnet_url %}
-                <span><a href="{{config.lokinet_mainnet_url}}">Connect via Lokinet</a></span>
-            {% elif info.stagenet and config.lokinet_stagenet_url %}
-                <span><a href="{{config.lokinet_stagenet_url}}">Connect via Lokinet</a></span>
-            {% elif info.testnet and config.lokinet_testnet_url %}
-                <span><a href="{{config.lokinet_testnet_url}}">Connect via Lokinet</a></span>
-            {% elif info.devnet and config.lokinet_devnet_url %}
-                <span><a href="{{config.lokinet_devnet_url}}">Connect via Lokinet</a></span>
-            {% endif %}
-
-            {% if config.stagenet_url and not info.stagenet %}
-                <span><a href="{{config.stagenet_url}}">Go to stagenet explorer</a>
-                    {%if config.lokinet_stagenet_url%}(<a href="{{config.lokinet_stagenet_url}}">via Lokinet</a>){%endif%}
-                </span>
-            {% endif %}
-            {% if config.testnet_url and not info.testnet %}
-                <span><a href="{{config.testnet_url}}">Go to testnet explorer</a>
-                    {%if config.lokinet_testnet_url%}(<a href="{{config.lokinet_testnet_url}}">via Lokinet</a>){%endif%}
-                </span>
-            {% endif %}
-            {% if config.devnet_url and not info.devnet %}
-                <span><a href="{{config.devnet_url}}">Go to devnet explorer</a>
-                    {%if config.lokinet_devnet_url%}(<a href="{{config.lokinet_devnet_url}}">via Lokinet</a>){%endif%}
-                </span>
-            {% endif %}
-            {% if config.mainnet_url and not info.mainnet %}
-                <span><a href="{{config.mainnet_url}}">Go to mainnet explorer</a>
-                    {%if config.lokinet_mainnet_url%}(<a href="{{config.lokinet_mainnet_url}}">via Lokinet</a>){%endif%}
-                </span>
-            {% endif %}
         </div>
 
         <div class="TitleDivider"></div>
@@ -62,7 +31,7 @@
         {% if info %}
             <h3 class="general_info info_list nowrap-spans">
                 <span><label>Height:</label> {{info.height}}</span>
-                <span><label>L2 Height:</label> {% if 'l2_height' in info%}{{info.l2_height}}{%else%}N/A{%endif%}</span>
+                <span><label>L2 Height:</label> {% if 'l2_height' in info_sd%}{{info_sd.l2_height}}{%else%}N/A{%endif%}</span>
                 <span><label>Hard fork:</label> v{{hf.version}}{%if 'revision' in hf%}.{{hf.revision}}{%endif%}</span>
                 {% if hf.version >= 16 %}
                     <span title="{{ info.pulse_target_timestamp | from_timestamp | format_datetime }}
@@ -77,15 +46,7 @@
                     <span><label>Network difficulty:</label> {{info.difficulty}}</span>
                     <span><label>Hash rate:</label> ~{{(info.difficulty / info.target) | si }}H/s</span>
                 {% endif %}
-                <span><label>Staking requirement:</label> {{stake.staking_requirement | cash}}</span>
-                <span title="{{(2500 * fees.fee_per_byte + 2*fees.fee_per_output) | cash(tag_name='OXEN')}} for a typical simple transaction (~2.5kB, 2 outputs)">
-                    <label>Base fee:</label>
-                    {{fees.fee_per_output | cash(tag_name='OXEN')}}/output + {{(fees.fee_per_byte * 1000) | cash(tag_name='OXEN')}}/kB
-                </span>
-                <span title="{{(2500 * fees.blink_fee_per_byte + 2*fees.blink_fee_per_output) | cash(tag_name='OXEN')}} for a typical simple blink transaction (~2.5kB, 2 outputs)">
-                    <label>Blink fee:</label>
-                    {{fees.blink_fee_per_output | cash(tag_name='OXEN')}}/output + {{(fees.blink_fee_per_byte * 1000) | cash(tag_name='OXEN')}}/kB
-                </span>
+                <span><label>Staking requirement:</label> {{stake.staking_requirement | cash(tag_name='SENT', decimals=2, formatted=True)}}</span>
                 <span title="{{(info.block_size_limit / 2) | si}}B soft limit, {{info.block_size_limit | si}}B hard limit. Blocks may include TXes up to the soft limit without penalty and incur increasing reward penalties as they approach the hard limit.">
                     <label>Block size limit:</label>
                     {{(info.block_size_limit / 2) | si}}B/{{info.block_size_limit | si}}B
@@ -95,47 +56,113 @@
         {% endif %}
 
         <h4 class="info_list nowrap-spans">
-            <span><label>Circulating Supply*:</label>:
-                {% if not emission or emission.status == 'BUSY' %}
-                    (still calculating...)</span>
-                {% elif emission.status == 'OK' %}
-                    {{(emission.emission_amount - emission.burn_amount) | cash(tag_name='OXEN')}}</span>
-                <span title="Gross emitted coins"><label>(Coinbase:</label> {{emission.emission_amount | cash(tag_name='OXEN')}}</span>
-                <span title="Transfers paid as transaction fees"><label>Fees:</label> {{emission.fee_amount | cash(tag_name='OXEN')}}</span>
-                <span title="Permanently destroyed (&quot;burned&quot;) fees"><label>Burned:</label> {{emission.burn_amount | cash(tag_name='OXEN')}}</span>
-                <span title="Accrued batch rewards not yet paid out"><label>Batched:</label> {{accrued_total | cash}}</span><label>).</label>
+            <span><label>Reward Rate Pool balance</label>{{ components.tooltip("Arbitrum data is currently sourced from the Session Testnet.") }}:
+                {% if not arbitrum_info or 'balance_reward_rate_pool' not in arbitrum_info %}
+                    (loading...)
+                {% else %}
+                    {{arbitrum_info.balance_reward_rate_pool | cash(tag_name='SENT', decimals=2, formatted=True)}}
                 {%endif%}
-            <p style="padding: 0px; margin-top: 2px; font-size: 0.9em">
-            * — The circulating supply may exclude any currently publicised locked OXEN; otherwise it is equal to the coinbase minus the number of burned coins.
-            Fees include paid transaction fees minus any portion that was burned.
-            </p>
+            </span>
+            <span><label>Session Node Rewards balance</label>{{ components.tooltip("Arbitrum data is currently sourced from the Session Testnet.") }}:
+                {% if not arbitrum_info or 'balance_service_node_rewards' not in arbitrum_info %}
+                    (loading...)
+                {% else %}
+                    {{arbitrum_info.balance_service_node_rewards | cash(tag_name='SENT', decimals=2, formatted=True)}}
+                {%endif%}
+            </span>
         </h4>
 
         <div class="TitleDivider"></div>
-
         <h4 class="tx-type-legend info_list nowrap-spans" style="margin-top: 0">
-            <span><label>TX Type Legend:</label> 🏁 Session Node Registration</span>
-            <span>⚑ Contribution</span>
+            <label>Session Arbitrum TX Type Legend:</label>
+            <span>🏁 Session Node Registration</span>
+            <span>🚫 Deregistration</span>
+            <span>🔑 Exit Request</span>
+            <span>🔓 Exit</span>
+            <span>🧹 Liquidation</span>
+            <span>🎁 Claim Rewards</span>
+            <span>📜 Multicontributor Contract Deploy</span>
+        </h4>
+    </div>
+
+    <div class="Wrapper">
+        <h2>Arbitrum Events
+            {% if event_page == 0 %}
+                (Last {{arbitrum_events|length}} Events)
+            {% else %}
+               (Events {{per_event_page * event_page}}–{{(per_event_page * event_page)+ (arbitrum_events|length)}})
+            {% endif %}
+            {{ components.tooltip("Arbitrum events are currently sourced from the Session Testnet.") }}
+        </h2>
+        <h4 class="general_info info_list nowrap-spans Subtitle">
+            <span><label>L2 Height:</label> {% if 'l2_height' in info_sd%}{{info_sd.l2_height}}{%else%}N/A{%endif%}</span>
+            <span><label>Total Events:</label> {{ arbitrum_events_pagination.total }}</span>
+        </h4>
+        <h4 class="Subtitle">
+        </h4>
+        <div class="TitleUnderliner"></div>
+
+        {% include 'include/arb_event_page_controls.html' %}
+
+        <table class="Table">
+            <thead>
+            <tr>
+                <td>L2 Height</td>
+                <td>Age [h:m:s]</td>
+                <td>Type</td>
+                <td>Transaction Hash</td>
+                <td>Contract</td>
+            </tr>
+            </thead>
+            <tbody>
+            {% import 'include/arb_event_symbol.html' as event_symbol %}
+            {% for e in arbitrum_events %}
+                <tr class="block">
+                    <td><a href="{{e.block | explorer_link_block}}">{{e.block}}</a></td>
+                    <td aria-label="{{e.block | arbitrum_time_estimate(current_block=info_sd.l2_height, current_block_time=info_sd.timestamp) | from_timestamp | format_datetime}}"><div class="tooltip">{{e.block | arbitrum_time_estimate(current_block=info_sd.l2_height, current_block_time=info_sd.timestamp) | from_timestamp | ago}}<span class="tooltip-text">{{e.block | arbitrum_time_estimate(current_block=info_sd.l2_height, current_block_time=info_sd.timestamp) | from_timestamp | format_datetime}}</span></div></td>
+                    <td aria-label="{{ e.name }}">{{event_symbol.display_event(e)}}</td>
+                    <td><a href="{{e.tx| explorer_link_tx}}">{{e.tx}}</a></td>
+                    <td>
+                        {% if e.name == 'NewServiceNodeV2' or e.name == 'ServiceNodeExitRequest' or e.name == 'ServiceNodeExit' or e.name == 'ServiceNodeLiquidated' or e.name == 'RewardsClaimed' -%}
+                            <a href="{{arbitrum_addresses['ServiceNodeRewards'] | explorer_link_address}}">Session Node Rewards</a>
+                        {% elif e.name == 'NewServiceNodeContributionContract' -%}
+                            <a href="{{arbitrum_addresses['ServiceNodeContributionFactory'] | explorer_link_address}}">Session Node Contribution Factory</a>
+                        {% endif -%}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        {% include 'include/arb_event_page_controls.html' %}
+    </div>
+
+    <div class="Wrapper" id="appchain-tx">
+        <div class="TitleDivider"></div>
+        <h4 class="tx-type-legend info_list nowrap-spans" style="margin-top: 0">
+            <label>Session Appchain TX Type Legend:</label>
+            <span>🏁 Session Node Registration</span>
             <span>👍 Recommission</span>
             <span>👎 Decommission</span>
             <span>🚫 Deregistration</span>
+            <span>🔓 Stake unlock</span>
+            <span>🎁 Block Reward</span>
             <span>📋 IP Change Penalty</span>
-            <span>🔓 Stake Unlock</span>
-            <span>🎫 Oxen Name System Purchase</span>
-            <span>💾 ONS Update</span>
+            <span>🎫 Session Name Service Purchase</span>
+            <span>💾 SNS Update</span>
         </h4>
     </div>
 
     {% include 'include/mempool.html' %}
 
     <div class="Wrapper">
-        <h2>Transactions in
+        <h2>Session Appchain Transactions in
             {% if page == 0 %}
                 the Last {{blocks|length}} Blocks
             {% else %}
                 Blocks {{blocks[0].height}}–{{blocks[-1].height}}
             {% endif %}
-            <a class="linked-icon" href="/range/{{blocks[0].height}}/{{blocks[-1].height}}" title="Permanent link to this block range">🔗</a>
+            <a class="linked-icon tooltip tooltip-icon" href="/range/{{blocks[0].height}}/{{blocks[-1].height}}" aria-label="Permanent link to this block range">🔗<span class="tooltip-text">Permanent link to this block range</span></a>
         </h2>
 
         {% set block_weights = blocks | map(attribute='block_weight') | sort %}
@@ -160,7 +187,7 @@
                 <td>Type</td>
                 <td>Transaction Hash</td>
                 <td>Fee</td>
-                <td title="Batched reward payments">Rewards</td>
+{#                <td title="Batched reward payments">Rewards</td>#}
                 <td>In/Out</td>
                 <td>TX Size</td>
             </tr>
@@ -179,7 +206,7 @@
                   <td>{{symbol.display(b.txs[0])}}</td>
                   <td><a href="/tx/{{b.txs[0].tx_hash}}">{{b.txs[0].tx_hash}}</a></td>
                   <td>{{fee.display(b.txs[0])}}</td>
-                  <td>{{b.coinbase_payouts | cash(tag=False, fixed=True, decimals=2)}}</td>
+{#                  <td>{{b.coinbase_payouts | cash(tag=False, fixed=True, decimals=2)}}</td>#}
                   <td>0/{{b.txs[0].vout | length}}</td>
                   <td>{{b.txs[0].size | si}}</td>
                 </tr>
@@ -192,7 +219,7 @@
                   <td></td>
                   <td></td>
                   <td></td>
-                  <td></td>
+{#                  <td></td>#}
                   <td></td>
                   <td></td>
                 </tr>
@@ -205,7 +232,7 @@
                   <td>{{symbol.display(tx)}}</td>
                   <td><a href="/tx/{{tx.tx_hash}}">{{tx.tx_hash}}</a></td>
                   <td>{{fee.display(tx)}}</td>
-                  <td></td>
+{#                  <td></td>#}
                   <td>{{tx.vin | length}}/{{tx.vout | length}}</td>
                   <td>{{tx.size | si}}</td>
                 </tr>
@@ -228,7 +255,7 @@
     {%endif%}
 
     <div class="Wrapper">
-      <h2> <a href="/quorums">View recent stored testing/checkpoint/blink/pulse quorums</a> </p>
+      <h2> <a href="/quorums">View recent stored testing/checkpoint/blink/pulse quorums</a> </h2>
     </div>
 
 {% endblock %}

@@ -10,12 +10,13 @@
 # LMQ RPC endpoint of oxend; can be a unix socket 'ipc:///path/to/oxend.sock' (preferred) or a tcp
 # socket 'tcp://127.0.0.1:5678'.  Typically you want this running with admin permission.
 # Leave this as None here, and set it for each observer in the mainnet.py/testnet.py/etc. script.
+sessiond_rpc = None
 oxend_rpc = None
 
 # Default blocks per page for the index.
 blocks_per_page=20
 # Maximum blocks per page a user can request
-max_blocks_per_page=100
+max_blocks_per_page=500
 
 # Some display and/or feature options:
 pusher=False
@@ -34,3 +35,11 @@ stagenet_url='https://stagenet.oxen.observer'
 lokinet_mainnet_url='http://blocks.loki'
 lokinet_testnet_url='http://testnet.loki'
 lokinet_devnet_url='http://devnet.kcpyawm9se7trdbzncimdi5t7st4p5mh9i1mg7gkpuubi4k4ku1y.loki'
+
+# Staking Backend API URL:
+staking_backend_api_url='http://127.0.0.1:1234'
+arbitrum_explorer_base_url='https://sepolia.arbiscan.io'
+
+# Staking info exclusion list
+staking_info_tags = {
+}
