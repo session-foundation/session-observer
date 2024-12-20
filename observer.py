@@ -629,8 +629,7 @@ def show_sns(name, more_details=False):
                     keccak_hash.update(val)
                     checksum = keccak_hash.digest()[0:4]
 
-                    val = network + val
-                          # + checksum
+                    val = network + val + checksum
 
                     sns_data[sns_type]['mapping'] = base58.encode(val.hex())
                     continue
