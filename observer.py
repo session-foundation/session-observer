@@ -25,7 +25,7 @@ import base58
 from Cryptodome.Hash import keccak
 import config
 import local_config
-from lmq import FutureJSON, omq_connection
+from lmq import FutureJSON, omq_connection, smq_connection
 
 # Make a dict of config.* to pass to templating
 conf = {x: getattr(config, x) for x in dir(config) if not x.startswith('__')}
@@ -135,7 +135,7 @@ def format_si(value):
     return filter_round(value) + '{}'.format(si_suffix[i])
 
 @app.template_filter('cash')
-def format_oxen(atomic, tag_name='SENT', tag=True, fixed=False, decimals=9, zero=None):
+def format_oxen(atomic, tag_name='SENT', tag=True, fixed=False, decimals=9, zero=None, formatted=False):
     """Formats an atomic current value as a human currency value.
     tag - if False then don't append " OXEN"
     fixed - if True then don't strip insignificant trailing 0's and '.'
@@ -144,6 +144,11 @@ def format_oxen(atomic, tag_name='SENT', tag=True, fixed=False, decimals=9, zero
     """
     if atomic == 0 and zero:
         disp = zero
+    elif formatted:
+        disp = "{{:,.{}f}}".format(decimals).format(atomic * 1e-9)
+        if not fixed and decimals > 0:
+            disp = disp.rstrip('0').rstrip('.')
+
     else:
         disp = "{{:.{}f}}".format(decimals).format(atomic * 1e-9)
         if not fixed and decimals > 0:
@@ -341,6 +346,7 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None,
     smq, sessiond = smq_connection()
 
     inforeq = FutureJSON(omq, oxend, 'rpc.get_info', 1)
+    inforeq_sd = FutureJSON(smq, sessiond, 'rpc.get_last_block_header', args={'fill_pow_hash': False, 'get_tx_hashes': False },cache_seconds=1)
     stake = FutureJSON(omq, oxend, 'rpc.get_staking_requirement', 10)
     base_fee = FutureJSON(omq, oxend, 'rpc.get_fee_estimate', 10)
     hfinfo = FutureJSON(omq, oxend, 'rpc.hard_fork_info', 10)
@@ -442,6 +448,7 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None,
     return flask.render_template('index.html',
             info=info,
             info_sd=info_sd,
+            arbitrum_info=get_arbitrum_info(),
             stake=stake.get(),
             fees=base_fee.get(),
             emission=coinbase.get(),
@@ -529,18 +536,18 @@ def block_with_txs_req(omq, oxend, hash_or_height, **kwargs):
 
     return FutureJSON(omq, oxend, 'rpc.get_block', cache_key='single', args=args, **kwargs)
 
-def ons_info(omq, oxend, name,ons_type,**kwargs):
-    if ons_type == 2:
+def sns_info(omq, oxend, name, sns_type, **kwargs):
+    if sns_type == 2:
         name=name+'.loki'
     name_hash = nacl.hash.blake2b(name.encode(), encoder = nacl.encoding.Base64Encoder)
 
     return FutureJSON(omq, oxend, 'rpc.ons_names_to_owners', args={
-      "entries": [{'name_hash':name_hash.decode('ascii'),'types':[ons_type]}]})
+      "entries": [{'name_hash':name_hash.decode('ascii'),'types':[sns_type]}]})
 
 
-@app.route('/ons/<string:name>')
-@app.route('/ons/<string:name>/<int:more_details>')
-def show_ons(name, more_details=False):
+@app.route('/sns/<string:name>')
+@app.route('/sns/<string:name>/<int:more_details>')
+def show_sns(name, more_details=False):
     name = name.lower()
     omq, oxend = omq_connection()
     info = FutureJSON(omq, oxend, 'rpc.get_info', 1)
@@ -552,43 +559,43 @@ def show_ons(name, more_details=False):
             id=name,
             )
 
-    ons_types = {'session':0,'wallet':1,'lokinet':2}
-    ons_data = {'name':name}
+    sns_types = {'session':0,'wallet':1,'lokinet':2}
+    sns_data = {'name':name}
     SESSION_ENCRYPTED_LENGTH = 146  # If the encrypted value is not of expected character 
     WALLET_ENCRYPTED_LENGTH = 210   # length it is of HF15 and before.
     LOKINET_ENCRYPTED_LENGTH = 144  # The user must update their session mapping.
 
-    for ons_type in ons_types:
-        onsinfo = ons_info(omq, oxend, name, ons_types[ons_type]).get()
+    for sns_type in sns_types:
+        sns_info_res = sns_info(omq, oxend, name, sns_types[sns_type]).get()
 
-        if 'entries' not in onsinfo:
+        if 'entries' not in sns_info_res:
             # If returned with no data from the RPC
-            if (ons_types[ons_type] == 2 and '-' in name and len(name) > 63) or (ons_types[ons_type] == 2 and '-' not in name and len(name) > 32):
-                ons_data[ons_type] = False
+            if (sns_types[sns_type] == 2 and '-' in name and len(name) > 63) or (sns_types[sns_type] == 2 and '-' not in name and len(name) > 32):
+                sns_data[sns_type] = False
             else:
-                ons_data[ons_type] = True
+                sns_data[sns_type] = True
 
         else:
-            onsinfo = onsinfo['entries'][0]
-            ons_data[ons_type] = onsinfo
+            sns_info_res = sns_info_res['entries'][0]
+            sns_data[sns_type] = sns_info_res
 
-            if len(onsinfo['encrypted_value']) not in [SESSION_ENCRYPTED_LENGTH, WALLET_ENCRYPTED_LENGTH, LOKINET_ENCRYPTED_LENGTH]:
+            if len(sns_info_res['encrypted_value']) not in [SESSION_ENCRYPTED_LENGTH, WALLET_ENCRYPTED_LENGTH, LOKINET_ENCRYPTED_LENGTH]:
                 # Encryption involves a much more expensive argon2-based calculation for HF15 registrations.
                 # Owners should be notified they should update to the new encryption format.
-                ons_data[ons_type] = ons_info(omq, oxend, name,ons_types[ons_type]).get()['entries'][0]
-                ons_data[ons_type]['mapping'] = 'Owner needs to update their ID for mapping info.'
+                sns_data[sns_type] = sns_info(omq, oxend, name, sns_types[sns_type]).get()['entries'][0]
+                sns_data[sns_type]['mapping'] = 'Owner needs to update their ID for mapping info.'
                 
             else:
                 # RPC returns encrypted_value as ciphertext and nonce concatenated.
                 # The nonce is the last 48 characters of the encrypted value and the remainder of characters is the encrypted_value.
-                nonce_received = onsinfo['encrypted_value'][-48:]
+                nonce_received = sns_info_res['encrypted_value'][-48:]
                 nonce = bytes.fromhex(nonce_received)
 
                 # The ciphertext is the encrypted_value with the nonce taken away.
-                ciphertext = bytes.fromhex(onsinfo['encrypted_value'][:-48])
+                ciphertext = bytes.fromhex(sns_info_res['encrypted_value'][:-48])
 
-                # If ons type is lokinet we need to add .loki to the name before hashing.
-                if ons_types[ons_type] == 2:
+                # If sns type is lokinet we need to add .loki to the name before hashing.
+                if sns_types[sns_type] == 2:
                     name+='.loki'
 
                 # Calculate the blake2b hash of the lower-case full name
@@ -600,11 +607,11 @@ def show_ons(name, more_details=False):
                 # XChaCha20+Poly1305 decryption
                 val = pysodium.crypto_aead_xchacha20poly1305_ietf_decrypt(ciphertext=ciphertext, ad=b'', nonce=nonce, key=decryption_key)
                 
-                if ons_types[ons_type] == 0:
-                    ons_data[ons_type]['mapping'] = val.hex()
+                if sns_types[sns_type] == 0:
+                    sns_data[sns_type]['mapping'] = val.hex()
                     continue
 
-                if ons_types[ons_type] == 1:
+                if sns_types[sns_type] == 1:
                     network = val[:1] # For mainnet, primary address.  Subaddress is \x74; integrated is \x73; testnet are longer.
                     
                     if network == b'\x00':
@@ -624,10 +631,10 @@ def show_ons(name, more_details=False):
 
                     val = network + val + checksum
 
-                    ons_data[ons_type]['mapping'] = base58.encode(val.hex())
+                    sns_data[sns_type]['mapping'] = base58.encode(val.hex())
                     continue
 
-                if ons_types[ons_type] == 2:
+                if sns_types[sns_type] == 2:
                     # val will currently be the raw lokinet ed25519 pubkey (32 bytes).  We can convert it to the more
                     # common lokinet address (which is the same value but encoded in z-base-32) and convert the bytes to
                     # a string:
@@ -643,7 +650,7 @@ def show_ons(name, more_details=False):
                     # Finally slap ".loki" on the end:
                     val += ".loki"
 
-                    ons_data[ons_type]['mapping'] = val
+                    sns_data[sns_type]['mapping'] = val
                     continue
                     
 
@@ -651,14 +658,14 @@ def show_ons(name, more_details=False):
         formatter = HtmlFormatter(cssclass="syntax-highlight", style="paraiso-dark")
         more_details = {
                 'details_css': formatter.get_style_defs('.syntax-highlight'),
-                'details_html': highlight(json.dumps(ons_data, indent="\t"), JsonLexer(), formatter),
+                'details_html': highlight(json.dumps(sns_data, indent="\t"), JsonLexer(), formatter),
                 }
     else:
         more_details = {}
                 
-    return flask.render_template('ons.html',
+    return flask.render_template('sns.html',
             info=info.get(),
-            ons=ons_data,
+            sns=sns_data,
             **more_details,
             )
 
@@ -716,8 +723,8 @@ def qr_sn_pubkey(pubkey):
     )
     qr.add_data(pubkey.upper())
     img = qr.make_image(
-        fill_color="#1e1d48",
-        back_color="#dbf7f5"
+        fill_color="#00f782",
+        back_color="#000000"
     )
     with BytesIO() as output:
         img.save(output, format="PNG")
@@ -981,10 +988,10 @@ def search():
     if val and len(val) <= 68 and val.endswith(".loki"):
         val = val.rstrip('.loki')
 
-    # ONS can be of length 64 however with txids, and sn pubkey's being of length 64 
+    # SNS can be of length 64 however with txids, and sn pubkey's being of length 64
     # I have removed it from the possible searches.
     if len(val) < 64 and all(c.isalnum() or c in '_-' for c in val):
-        return flask.redirect(flask.url_for('show_ons', name=val), code=301)    
+        return flask.redirect(flask.url_for('show_sns', name=val), code=301)
 
     return flask.render_template('not_found.html',
             info=info.get(),

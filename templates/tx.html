@@ -166,9 +166,9 @@ This tx does not includes a vote from this testing session node (only 7 votes ar
             <p><label>Unlock signature:</label> {{unlock_signature}}</p> {# FIXME #}
         {% elif tx.type == 4 and 'lns' in tx.extra %}
             {% if 'buy' in tx.extra.lns %}
-                <h2>🎫 Oxen Name Service Registration</h2>
+                <h2>🎫 Session Name Service Registration</h2>
             {% elif 'update' in tx.extra.lns %}
-                <h2>💾 Oxen Name Service Update</h2>
+                <h2>💾 Session Name Service Update</h2>
             {% endif %}
             {#FIXME - show some metadata?#}
         {% elif 'sn_registration' in tx.extra %}
@@ -267,7 +267,7 @@ This tx does not includes a vote from this testing session node (only 7 votes ar
             <table class="Table">
                 <thead>
                     <tr>
-                        <td>Stealth Address</td>
+                        <td>Temp Address</td>
                         <td>Amount</td>
                         <td title="Global blockchain output counter">Output Index</td>
                     </tr>
