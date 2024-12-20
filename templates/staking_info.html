@@ -1,0 +1,94 @@
+{% extends "_basic.html" %}
+
+{% block content %}
+    <div class="Wrapper">
+        <div class="TitleDivider"></div>
+        <h1 style="margin-bottom: 0px">Session Node Staking Information</h1>
+        <h3><span class="sn-count">{{total_nodes}}</span> Session Nodes,
+            <span class="sn-count">{{operator_list | count}}</span> operators,
+            <span class="sn-count">{{contributor_list | count}}</span> contributors,
+            and <span class="sn-count">{{total_staked | cash(tag_name='SENT', zero='?', formatted=true, decimals=2)}}</span> total staked.</h3>
+
+        <h2 style="margin-bottom: 0px" id="service-node-operators">Session Node Operators <span class="sn-count">({{operator_list | count}})</span></h2>
+        <div class="TitleDivider sn-awaiting"></div>
+        <table style="width:100%">
+            <thead>
+            <tr>
+                <td>Session Nodes</td>
+                <td>Total Staked</td>
+                <td>Wallet Address</td>
+                {% if has_operator_tags %}
+                <td>Tag</td>
+                {% endif %}
+            </tr>
+            </thead>
+
+            <tbody>
+            {%for op in (operator_list[:visible_operators])%}
+                <tr>
+                    <td>{{op.num_nodes}}</td>
+                    <td>{{op.staked | cash(tag_name='SENT', zero='?', formatted=true, decimals=2)}}</td>
+                    <td>{{op.address}}</td>
+                    {% if has_operator_tags %}
+                    <td>{%if op.tag%}{{op.tag}}{% endif %}</td>
+                    {% endif %}
+                </tr>
+            {%endfor%}
+            </tbody>
+        </table>
+        {% if operator_list | count > visible_operators %}
+            {% if contributor_list | count > visible_contributors %}
+                <div class="center" style="text-align: center; margin-bottom: 10px">
+                    <a href="/staking-info/e/c#service-node-operators">+ View {{operator_list | count - visible_operators}} more </a>
+                </div>
+            {% else %}
+            <div class="center" style="text-align: center; margin-bottom: 10px">
+                <a href="/staking-info/e/e#service-node-operators">+ View {{operator_list | count - visible_operators}} more </a>
+            </div>
+                {% endif %}
+        {% endif %}
+
+        <h2 style="margin-bottom: 0px" id="service-nodes-contributors">Session Node Contributors <span class="sn-count">({{contributor_list | count}})</span></h2>
+        <div class="TitleDivider sn-inactive"></div>
+
+        <table style="width:100%">
+            <thead>
+            <tr>
+                <td>Session Nodes</td>
+                <td>Total Staked</td>
+                <td>Wallet Address</td>
+                {% if has_contributor_tags %}
+                <td>Tag</td>
+                {% endif %}
+            </tr>
+            </thead>
+
+            <tbody>
+            {%for op in (contributor_list[:visible_contributors])%}
+                <tr>
+                    <td>{{op.num_nodes}}</td>
+                    <td>{{op.staked | cash(tag_name='SENT', zero='?', formatted=true, decimals=2)}}</td>
+                    <td>{{op.address}}</td>
+                    {% if has_contributor_tags %}
+                    <td>{%if op.tag%}{{op.tag}}{% endif %}</td>
+                    {% endif %}
+                </tr>
+            {%endfor%}
+            </tbody>
+        </table>
+
+        {% if contributor_list | count > visible_contributors %}
+            {% if operator_list | count > visible_operators %}
+                <div class="center" style="text-align: center; margin-bottom: 10px">
+                    <a href="/staking-info/c/e#service-nodes-contributors">+ View {{contributor_list | count - visible_contributors}} more </a>
+                </div>
+            {% else %}
+                <div class="center" style="text-align: center; margin-bottom: 10px">
+                    <a href="/staking-info/e/e#service-nodes-contributors">+ View {{contributor_list | count - visible_contributors}} more </a>
+                </div>
+            {% endif %}
+        {% endif %}
+
+    </div>
+
+{% endblock %}

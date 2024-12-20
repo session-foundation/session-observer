@@ -1145,3 +1145,103 @@ def api_price(fiat=None):
     else:
         fiat = fiat.lower()
         return flask.jsonify({ fiat: ticker_cache[fiat] } if fiat in ticker_cache else {})
+
+@app.route("/staking-info")
+@app.route("/staking-info/<operator_tag>/<contributor_tag>")
+def staking_info(operator_tag=None, contributor_tag=None):
+    omq, oxend = omq_connection()
+    info = FutureJSON(omq, oxend, 'rpc.get_info', 1)
+    sn_res = FutureJSON(omq, oxend, 'rpc.get_service_nodes', 60).get()
+
+    operators = {}  # OP_WALLET: number_of_nodes_operated
+    stakes = {}  # WALLET: list of (amount, bool) where bool=True if operator stake
+
+    required = {}  # OP_WALLET: aggregate_staking_requirement (in atomic units)
+    solo = {}  # OP_WALLET: count of solo nodes (fully staked by operator)
+    control = {}  # OP_WALLET: total stake in operated nodes (in atomic units)
+
+    total_staked = 0
+
+    sns_list = sn_res.get('service_node_states')
+
+    for sns in sns_list:
+        operator = None
+        for c in sns['contributors']:
+            orig_addr = c['address']
+            stakes.setdefault(orig_addr, [])
+            total_staked += c['amount']
+
+            op = False
+            if operator is None:
+                # This is the first contributor, hence the operator
+                op = True
+                operator = orig_addr
+                operators.setdefault(orig_addr, 0)
+                operators[orig_addr] += 1
+                control.setdefault(operator, 0)
+                solo.setdefault(orig_addr, 0)
+                if c['amount'] == sns['staking_requirement']:
+                    solo[orig_addr] += 1
+                required.setdefault(orig_addr, 0)
+                required[orig_addr] += sns['staking_requirement']
+
+            stakes[orig_addr].append((c['amount'], op))
+            control[operator] += c['amount']
+
+    # Calculate operator stakes and total stakes (still in atomic units)
+    operator_stakes = {w: sum(x[0] for x in s if x[1]) for w, s in stakes.items()}
+    # For contributors, we only count non-operator stakes
+    # i.e., we only sum amounts where op=False
+    contributor_stakes = {w: sum(x[0] for x in s if not x[1]) for w, s in stakes.items()}
+    contributor_nodes = {w: sum(1 for x in s if not x[1]) for w, s in stakes.items()}
+
+    has_operator_tags = False
+    has_contributor_tags = False
+
+    operator_list = []
+    for op in operators:
+        staked_tokens = operator_stakes[op]
+        tag = config.staking_info_tags.get(op, None)
+        if tag is not None and not has_operator_tags:
+            has_operator_tags = True
+        operator_list.append({
+            "address": op,
+            "tag": tag,
+            "num_nodes": operators[op],
+            "staked": staked_tokens
+        })
+
+    contributor_list = []
+    for w in stakes:
+        # Only include in contributor list if there is at least one contribution as a non-operator
+        if contributor_stakes[w] > 0:
+            staked_tokens = contributor_stakes[w]
+            tag = config.staking_info_tags.get(w, None)
+            if tag is not None and not has_contributor_tags:
+                has_contributor_tags = True
+            contributor_list.append({
+                "address": w,
+                "tag": tag,
+                "num_nodes": contributor_nodes[w],
+                "staked": staked_tokens
+            })
+
+    # Sort operators by number_of_nodes desc, then staked desc, then address
+    operator_list.sort(key=lambda x: (-x['num_nodes'], -x['staked'], x['address']))
+    # Sort contributors by staked desc, then address
+    contributor_list.sort(key=lambda x: (-x['staked'], x['address']))
+
+    visible_operators = len(operator_list) if operator_tag == 'e' else 50
+    visible_contributors = len(contributor_list) if contributor_tag == 'e' else 50
+
+    return flask.render_template('staking_info.html',
+                                 info=info.get(),
+                                 operator_list=operator_list,
+                                 contributor_list=contributor_list,
+                                 total_staked=total_staked,
+                                 total_nodes=len(sns_list),
+                                 has_operator_tags=has_operator_tags,
+                                 has_contributor_tags=has_contributor_tags,
+                                 visible_operators=visible_operators,
+                                 visible_contributors=visible_contributors
+                                 )
