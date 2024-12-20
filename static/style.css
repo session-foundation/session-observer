@@ -1,16 +1,43 @@
 :root {
-    --primary-bg-color: #0b0a1a;
-    --primary-fg-color: white;
-    --primary-link-color: white;
-    --primary-link-highlight-color: #12c7ba;
-    --control-bg-color: #12c7ba;
-    --control-fg-color: black;
-    --control-highlight-link-color: #0c8b82;
-    --control-highlight-bg-color: #dbf7f5;
-    --control-highlight-fg-color: black;
-    --text-highlight-color: #12c7ba;
-    --header-bg-color: #12c7ba;
-    --header-fg-color: black;
+    --session-black: #0a0a0a;
+
+    --session-green: #00f782;
+    --session-green-dark: #00aa59;
+    --session-green-darker: #042D19;
+    --session-green-darkest: #021b0f;
+
+    --session-text: #dbdbdb;
+    --session-text-black: #1B1B1B;
+    --session-text-black-secondary: #6D6D6D;
+    --session-white: #ffffff;
+
+    --primary-bg-color: var(--session-black);
+    --primary-fg-color: var(--session-white);
+    --primary-link-color: var(--session-green);
+    --primary-link-highlight-color: var(--session-green-dark);
+
+    --text-highlight-color: var(--session-green);
+
+    /*--control-bg-color: var(--session-green);*/
+    /*--control-fg-color: var(--session-black);*/
+
+    --control-bg-color: var(--session-green-darker);
+    --control-fg-color: var(--session-green);
+
+
+    --control-highlight-link-color: var(--control-bg-color);
+    --control-highlight-bg-color: var(--control-fg-color);
+    --control-highlight-fg-color: var(--control-bg-color);
+
+    --header-bg-color: var(--control-bg-color);
+    --header-fg-color: var(--control-fg-color);
+}
+
+@font-face {
+    font-family: 'Roboto Flex';
+    src: url('./RobotoFlex-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
 }
 
 
@@ -19,8 +46,8 @@ body {
     padding: 0;
     font-size: 80%;
     background-color: var(--primary-bg-color);
-    font-family: sans-serif;
-    color: white;
+    font-family: 'Roboto Flex', sans-serif;
+    color: var(--session-text);
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -48,19 +75,18 @@ h1, h2, h3, h4, h5, h6 {
     flex-grow: 1;
     flex-shrink: 1;
 }
-#header form.top-search input[type="submit"] {
+#header form.top-search button {
     flex: 0 0 12ex;
     margin-right: 0;
+    cursor: pointer;
 }
-
-
 
 .general_info {
     font-size: 12px;
     margin-top: 5px;
     margin-bottom: 3px;
 }
-.info_list>span:not(:first-child):before {
+.info_list>span:not(:last-child):after {
     content: " | ";
 }
 .info_list>span {
@@ -110,18 +136,18 @@ label.warning {
 .PageButton {
     background-color: var(--control-bg-color);
     min-height: 1.5em;
-    padding: 5px;
-    padding-top: 8px;
+    padding: 5px 10px;
     margin-right: 1em;
     font-weight: bold;
     font-size: 1em;
+    line-height: 1.5em;
     color: var(--control-fg-color);
     border: none;
-    font-family: sans-serif;
 }
 
 .PageButton.disabled {
-    background-color: #899897;
+    background-color: var(--session-green-darkest);
+    color: var(--session-green-darker);
 }
 
 .PaginationControl select {
@@ -134,19 +160,24 @@ label.warning {
 }
 
 .PageButton:hover {
-    color: var(--control-highlight-fg-color);
     background-color: var(--control-highlight-bg-color);
 }
+
+.PageButton:hover > a {
+    color: var(--session-black) !important;
+}
+
 .PageButton.disabled:hover {
-    background-color: #707070;
+    background-color: var(--session-green-darkest);
+    color: var(--session-green-darker);
 }
 
 .pages a:link, .pages a:visited {
-    color: var(--control-fg-color);
+    color: var(--session-green);
 }
 
 .pages a:hover, .PageButton:hover {
-    color: var(--control-highlight-link-color);
+    color: var(--session-black);
 }
 
 .Wrapper {
@@ -176,13 +207,13 @@ table thead tr,
 .TitleUnderliner {
     height: 2px;
     width: 100%;
-    background-color: var(--control-bg-color);
+    background-color: var(--session-green);
     margin-bottom: 1em;
 }
 .TitleDivider {
     height: 2px;
     width: 100%;
-    background-color: var(--control-bg-color);
+    background-color: var(--session-green);
     margin: 1em 0;
 }
 
@@ -213,12 +244,12 @@ td {
 
 a:link, a:visited {
     text-decoration: underline;
-    color: var(--primary-fg-color);
+    color: var(--session-green);
 }
 
 a:hover {
     text-decoration: underline;
-    color: var(--control-bg-color);
+    color: var(--session-white);
 }
 
 form {
@@ -386,20 +417,20 @@ div.quorums>div>.workers {
     flex-basis: 40px;
     max-width: 60px;
     flex-grow: 1;
-    background-color: #a2a2a2;
+    background-color: var(--session-green-darkest);
     border: 1px solid #555;
     border-radius: 5px;
     overflow: hidden;
     text-overflow: "";
     margin: 3px 3px;
-    padding: 1px 1px 1px 1px;
+    padding: 1px 1px 1px 3px;
     font-size: 10px;
     color: white;
     text-decoration: none;
 }
 .quorums .validators .sn {
-    background-color: #777;
-    border: 1px solid #aaa;
+    background-color: var(--session-green-darker);
+    border: 1px solid var(--session-white);
     color: white;
 }
 .quorums .sn:hover {
@@ -510,4 +541,60 @@ tr.tx-input-key-image>td {
 }
 .sn-details .sn-details-main img.qr {
     flex-grow: 0;
+}
+
+img.qr {
+    border-radius: 5px;
+    border: 2px solid var(--session-green);
+}
+
+
+/* Tooltip container */
+.tooltip {
+    position: relative;
+    width: max-content;
+    text-indent: 0;
+    display: inline-flex;
+    cursor: pointer;
+    align-self: center;
+    vertical-align: middle;
+}
+
+.tooltip-icon {
+    margin-bottom: 2px;
+}
+
+/* Tooltip text */
+.tooltip .tooltip-text {
+    visibility: hidden;
+    width: max-content;
+    background-color: var(--session-black);
+    border: 1px solid var(--session-white);
+    color: var(--session-text);
+    text-align: center;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 12px;
+
+    /* Position the tooltip */
+    position: absolute;
+    z-index: 1;
+    bottom: 100%;
+    text-indent: 0;
+
+
+    /* Start hidden and slightly off position */
+    opacity: 0;
+    transform: translateY(5px);
+
+    /* Add a smooth transition for opacity and transform */
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+/* Show the tooltip text when you mouse over the tooltip container */
+.tooltip:hover .tooltip-text {
+    visibility: visible;
+
+    opacity: 1;
+    transform: translateY(0);
 }

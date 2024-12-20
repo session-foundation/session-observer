@@ -2,10 +2,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
   {% block head %}
-      <title>{% block title %}{% endblock %}Oxen{{' TESTNET' if info and info.testnet else ' DEVNET' if info and info.devnet else ' STAGENET' if info and info.stagenet else ''}}
-  Blockchain Explorer</title>
-    <link rel="stylesheet" type="text/css" href="/style.css">
+      <title>
+          {% block title %}
+              Session
+              {% if info and info.testnet %} Testnet
+              {% elif info and info.devnet %} Devnet
+              {% elif info and info.stagenet %} Stagenet
+              {% endif %}
+              Observer
+          {% endblock %}
+      </title>
     {% if refresh %}
         <meta http-equiv="refresh" content="{{refresh}}">
     {% endif %}
@@ -19,7 +29,8 @@
 <div id="header" class="Wrapper">
     {% block header %}
     <div id="header-content">
-        <h1 class="Header"><a href="/">Oxen
+        <h1 class="Header">
+            <a href="/">Session
                 {%if info and info.testnet%}
                     <span style="color:#ff6b62">Testnet</span>
                 {%elif info and info.devnet%}
@@ -27,10 +38,12 @@
                 {%elif info and info.stagenet%}
                     <span style="color:#32cd32">Stagenet</span>
                 {%endif%}
-                Blockchain Explorer</a></h1>
+                Observer
+            </a>
+        </h1>
         <form action="/search" method="get" class="top-search">
-            <input type="text" name="value" size="64" placeholder="Block height, Block hash, Transaction ID, Session Node pubkey or ONS">
-            <input type="submit" class="PageButton" value="Search">
+            <input type="text" name="value" size="64" placeholder="Block height, Block hash, Transaction ID, Session Node pubkey or SNS" aria-label="Search for a block, transaction, or session node" />
+            <button type="submit" class="PageButton">Search</button>
         </form>
     </div>
     <div class="TitleUnderliner" style="margin-bottom: 1em"></div>
@@ -44,9 +57,9 @@
     {% block footer %}
     <div class="TitleDivider" style="margin-top: 1em" ></div>
     <p style="margin-top:10px">
-        <a href="https://github.com/oxen-io/oxen-observer">Source Code</a>
-        | Explorer Revision: {{server.revision}}
-        | Oxen Version: {{info.version}}
+        <a href="https://github.com/session-foundation/session-observer">Source Code</a>
+        | Observer Revision: {{server.revision}}
+        | Core Version: {{info.version}}
     </p>
     {% endblock %}
 </div>
