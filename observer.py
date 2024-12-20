@@ -22,7 +22,7 @@ import pysodium
 import nacl.encoding
 import nacl.hash
 import base58
-from Cryptodome.Hash import keccak
+# from Cryptodome.Hash import keccak
 import config
 import local_config
 from lmq import FutureJSON, omq_connection, smq_connection
@@ -624,12 +624,13 @@ def show_sns(name, more_details=False):
                         network = b'\x73'
 
                     val = val[1:]
-                    keccak_hash = keccak.new(digest_bits=256)
-                    keccak_hash.update(network)
-                    keccak_hash.update(val)
-                    checksum = keccak_hash.digest()[0:4]
+                    # keccak_hash = keccak.new(digest_bits=256)
+                    # keccak_hash.update(network)
+                    # keccak_hash.update(val)
+                    # checksum = keccak_hash.digest()[0:4]
 
-                    val = network + val + checksum
+                    val = network + val
+                          # + checksum
 
                     sns_data[sns_type]['mapping'] = base58.encode(val.hex())
                     continue
