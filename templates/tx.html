@@ -179,7 +179,7 @@ This tx does not includes a vote from this testing session node (only 7 votes ar
             {%if tx.extra.sn_registration.contributors[0].portion == 1000000%}N/A (solo registration)
             {%else%}{{(tx.extra.sn_registration.fee / 10000) | chop0}}%
             {%endif%}</p>
-            <p><label>Contribution Amount:</label> {%if 'stake_amount' in tx%}{{tx.stake_amount | cash(tag_name='OXEN')}}{%else%}???{%endif%}</p>
+            <p><label>Contribution Amount:</label> {%if 'stake_amount' in tx%}{{tx.stake_amount | cash(tag_name='Network Token')}}{%else%}???{%endif%}</p>
             {%if 'expiry' in tx.extra.sn_registration%}
               <p><label>Expiration:</label> {{tx.extra.sn_registration.expiry | from_timestamp | format_datetime}} ({{tx.extra.sn_registration.expiry}}),
               or {{(tx.extra.sn_registration.expiry|from_timestamp - server.datetime) | reltime}}</p>
@@ -277,7 +277,7 @@ This tx does not includes a vote from this testing session node (only 7 votes ar
                     {%for out in tx.vout%}
                         <tr>
                             <td><label>{{loop.index0}}:</label> {{out.target.key}}</td>
-                            <td>{%if out.amount > 0 %}{{out.amount | cash(tag_name='SENT', zero='?')}}{%endif%}</td>
+                            <td>{%if out.amount > 0 %}{{out.amount | cash(zero='?')}}{%endif%}</td>
                             <td>{%if 'output_indices' in tx%}{{tx.output_indices[loop.index0]}}{# FIXME: of {{num_outputs}}#}{%endif%}</td>
                         </tr>
                     {%endfor%}

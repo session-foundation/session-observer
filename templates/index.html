@@ -46,7 +46,7 @@
                     <span><label>Network difficulty:</label> {{info.difficulty}}</span>
                     <span><label>Hash rate:</label> ~{{(info.difficulty / info.target) | si }}H/s</span>
                 {% endif %}
-                <span><label>Staking requirement:</label> {{stake.staking_requirement | cash(tag_name='SENT', decimals=2, formatted=True)}}</span>
+                <span><label>Staking requirement:</label> {{stake.staking_requirement | cash(decimals=2, formatted=True)}}</span>
                 <span title="{{(info.block_size_limit / 2) | si}}B soft limit, {{info.block_size_limit | si}}B hard limit. Blocks may include TXes up to the soft limit without penalty and incur increasing reward penalties as they approach the hard limit.">
                     <label>Block size limit:</label>
                     {{(info.block_size_limit / 2) | si}}B/{{info.block_size_limit | si}}B
@@ -60,14 +60,14 @@
                 {% if not arbitrum_info or 'balance_reward_rate_pool' not in arbitrum_info %}
                     (loading...)
                 {% else %}
-                    {{arbitrum_info.balance_reward_rate_pool | cash(tag_name='SENT', decimals=2, formatted=True)}}
+                    {{arbitrum_info.balance_reward_rate_pool | cash(tag_name='Network Token', decimals=2, formatted=True)}}
                 {%endif%}
             </span>
             <span><label>Session Node Rewards balance</label>{{ components.tooltip("Arbitrum data is currently sourced from the Session Testnet.") }}:
                 {% if not arbitrum_info or 'balance_service_node_rewards' not in arbitrum_info %}
                     (loading...)
                 {% else %}
-                    {{arbitrum_info.balance_service_node_rewards | cash(tag_name='SENT', decimals=2, formatted=True)}}
+                    {{arbitrum_info.balance_service_node_rewards | cash(tag_name='Network Token', decimals=2, formatted=True)}}
                 {%endif%}
             </span>
         </h4>

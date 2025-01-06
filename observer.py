@@ -135,7 +135,7 @@ def format_si(value):
     return filter_round(value) + '{}'.format(si_suffix[i])
 
 @app.template_filter('cash')
-def format_oxen(atomic, tag_name='SENT', tag=True, fixed=False, decimals=9, zero=None, formatted=False):
+def format_oxen(atomic, tag_name='', tag=True, fixed=False, decimals=9, zero=None, formatted=False):
     """Formats an atomic current value as a human currency value.
     tag - if False then don't append " OXEN"
     fixed - if True then don't strip insignificant trailing 0's and '.'
@@ -155,6 +155,9 @@ def format_oxen(atomic, tag_name='SENT', tag=True, fixed=False, decimals=9, zero
             disp = disp.rstrip('0').rstrip('.')
 
     if tag:
+        if tag_name == 'OXEN':
+            tag_name = ''
+
         disp += ' ' + tag_name
     return disp
 
@@ -584,7 +587,7 @@ def show_sns(name, more_details=False):
                 # Owners should be notified they should update to the new encryption format.
                 sns_data[sns_type] = sns_info(omq, oxend, name, sns_types[sns_type]).get()['entries'][0]
                 sns_data[sns_type]['mapping'] = 'Owner needs to update their ID for mapping info.'
-                
+
             else:
                 # RPC returns encrypted_value as ciphertext and nonce concatenated.
                 # The nonce is the last 48 characters of the encrypted value and the remainder of characters is the encrypted_value.
@@ -603,17 +606,17 @@ def show_sns(name, more_details=False):
 
                 # Decryption key: another blake2b hash, but this time a keyed blake2b hash where the first hash is the key
                 decryption_key = nacl.hash.blake2b(name.encode(), key=name_hash, encoder = nacl.encoding.RawEncoder)
-                
+
                 # XChaCha20+Poly1305 decryption
                 val = pysodium.crypto_aead_xchacha20poly1305_ietf_decrypt(ciphertext=ciphertext, ad=b'', nonce=nonce, key=decryption_key)
-                
+
                 if sns_types[sns_type] == 0:
                     sns_data[sns_type]['mapping'] = val.hex()
                     continue
 
                 if sns_types[sns_type] == 1:
                     network = val[:1] # For mainnet, primary address.  Subaddress is \x74; integrated is \x73; testnet are longer.
-                    
+
                     if network == b'\x00':
                         network = b'\x72'
 
@@ -641,7 +644,7 @@ def show_sns(name, more_details=False):
                     val = b32encode(val).decode()
 
                     # Python's regular base32 uses a different alphabet, so translate from base32 to z-base-32:
-                    val = val.translate(str.maketrans("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567", 
+                    val = val.translate(str.maketrans("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567",
                                                       "ybndrfg8ejkmcpqxot1uwisza345h769"))
 
                     # Base32 is also padded with '=', which isn't used in z-base-32:
@@ -652,7 +655,7 @@ def show_sns(name, more_details=False):
 
                     sns_data[sns_type]['mapping'] = val
                     continue
-                    
+
 
     if more_details:
         formatter = HtmlFormatter(cssclass="syntax-highlight", style="paraiso-dark")
@@ -662,7 +665,7 @@ def show_sns(name, more_details=False):
                 }
     else:
         more_details = {}
-                
+
     return flask.render_template('sns.html',
             info=info.get(),
             sns=sns_data,
@@ -829,7 +832,7 @@ def show_block(height=None, hash=None, more_details=False):
             next_block=next_block.get() if next_block else None,
             **more_details,
             )
- 
+
 
 @app.route('/block/latest')
 def show_block_latest():
@@ -967,12 +970,12 @@ def search():
         v >>= 4
         val = "{:64x}".format(v)
 
-    if len(val) == 64: 
+    if len(val) == 64:
         # Initiate all the lookups at once, then redirect to whichever one responds affirmatively
         snreq = sn_req(omq, oxend, val)
         blreq = block_header_req(omq, oxend, val, fail_okay=True)
         txreq = tx_req(omq, oxend, [val])
-        
+
         sn = snreq.get()
         if sn and 'service_node_states' in sn and sn['service_node_states']:
             return flask.redirect(flask.url_for('show_sn', pubkey=val), code=301)
