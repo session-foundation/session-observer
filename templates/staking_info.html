@@ -7,7 +7,7 @@
         <h3><span class="sn-count">{{total_nodes}}</span> Session Nodes,
             <span class="sn-count">{{operator_list | count}}</span> operators,
             <span class="sn-count">{{contributor_list | count}}</span> contributors,
-            and <span class="sn-count">{{total_staked | cash(tag_name='Network Token', zero='?', formatted=true, decimals=2)}}</span> total staked.</h3>
+            and <span class="sn-count">{{total_staked | cash(zero='?', formatted=true, decimals=2)}}</span> total staked.</h3>
 
         <h2 style="margin-bottom: 0px" id="service-node-operators">Session Node Operators <span class="sn-count">({{operator_list | count}})</span></h2>
         <div class="TitleDivider sn-awaiting"></div>

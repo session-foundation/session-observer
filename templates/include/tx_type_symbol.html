@@ -43,7 +43,7 @@
                              {%-endif%}
                              {{tx.extra.service_node_pubkey}}
                              {%-for c in tx.extra.contributors%}
-                             {{c.address | truncate(15)}} ({{(c.amount / 1000000000) | chop0}} Network Token stake)
+                             {{c.address | truncate(15)}} ({{(c.amount / 1000000000) | chop0 | cash }} stake)
                              {%-endfor%}">🏁{%if text%} registration{%endif%}</span>
             {% endif %}
         {%- elif 'sn_contributor' in tx.extra -%}
