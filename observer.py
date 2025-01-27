@@ -103,17 +103,6 @@ def relative_time(seconds, two_part=False, in_ago=True, neg_is_now=False):
 
     return delta if not in_ago else delta + ' ago' if ago else 'in ' + delta
 
-# NOTE: Arbitrum averages 4 blocks per second
-@app.template_filter('arbitrum_time_estimate')
-def arbitrum_time_estimate(event_block, current_block, current_block_time):
-    if current_block_time is None or event_block is None:
-        return None
-
-    block_diff = event_block - current_block
-    seconds_diff = block_diff /4
-
-    return current_block_time + seconds_diff
-
 @app.template_filter('roundish')
 def filter_round(value):
     return ("{:.0f}" if value >= 100 or isinstance(value, int) else "{:.1f}" if value >= 10 else "{:.2f}").format(value)

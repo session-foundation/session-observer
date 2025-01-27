@@ -119,7 +119,7 @@
             {% for e in arbitrum_events %}
                 <tr class="block">
                     <td><a href="{{e.block | explorer_link_block}}">{{e.block}}</a></td>
-                    <td aria-label="{{e.block | arbitrum_time_estimate(current_block=info_sd.l2_height, current_block_time=info_sd.timestamp) | from_timestamp | format_datetime}}"><div class="tooltip">{{e.block | arbitrum_time_estimate(current_block=info_sd.l2_height, current_block_time=info_sd.timestamp) | from_timestamp | ago}}<span class="tooltip-text">{{e.block | arbitrum_time_estimate(current_block=info_sd.l2_height, current_block_time=info_sd.timestamp) | from_timestamp | format_datetime}}</span></div></td>
+                    <td aria-label="{{e.timestamp | format_datetime}}"><div class="tooltip">{{e.timestamp | from_timestamp | ago}}<span class="tooltip-text">{{e.timestamp | from_timestamp | format_datetime}}</span></div></td>
                     <td aria-label="{{ e.name }}">{{event_symbol.display_event(e)}}</td>
                     <td><a href="{{e.tx| explorer_link_tx}}">{{e.tx}}</a></td>
                     <td>
