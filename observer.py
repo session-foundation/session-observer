@@ -124,9 +124,9 @@ def format_si(value):
     return filter_round(value) + '{}'.format(si_suffix[i])
 
 @app.template_filter('cash')
-def format_oxen(atomic, tag_name='', tag=True, fixed=False, decimals=9, zero=None, formatted=False):
+def format_oxen(atomic, tag_name='SESH', tag=True, fixed=False, decimals=9, zero=None, formatted=False):
     """Formats an atomic current value as a human currency value.
-    tag - if False then don't append " OXEN"
+    tag - if False then don't append "<tag_name>"
     fixed - if True then don't strip insignificant trailing 0's and '.'
     decimals - at how many decimal we should round; the default is full precision
     fixed - if specified, replace 0 with this string
@@ -144,9 +144,6 @@ def format_oxen(atomic, tag_name='', tag=True, fixed=False, decimals=9, zero=Non
             disp = disp.rstrip('0').rstrip('.')
 
     if tag:
-        if tag_name == 'OXEN':
-            tag_name = ''
-
         disp += ' ' + tag_name
     return disp
 
