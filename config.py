@@ -1,3 +1,5 @@
+import oxenmq
+
 # Default configuration options for block observer.
 #
 # To override settings add `config.whatever = ...` into `local_config.py`; adding settings *here*
@@ -37,8 +39,8 @@ lokinet_testnet_url='http://testnet.loki'
 lokinet_devnet_url='http://devnet.kcpyawm9se7trdbzncimdi5t7st4p5mh9i1mg7gkpuubi4k4ku1y.loki'
 
 # Staking Backend API URL:
-staking_backend_api_url='http://127.0.0.1:1234'
-arbitrum_explorer_base_url='https://sepolia.arbiscan.io'
+staking_backend_api_url=''
+arbitrum_explorer_base_url='https://arbiscan.io'
 
 # Staking info exclusion list
 staking_info_tags = {

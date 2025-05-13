@@ -294,20 +294,29 @@ def parse_mempool(mempool_future):
     return mp
 
 def get_contract_addresses():
-    res = requests.get(config.staking_backend_api_url + "/contract/addresses/core").json()
-    addresses = res.get("addresses")
+    addresses = []
+    if len(config.staking_backend_api_url) > 0:
+        res = requests.get(config.staking_backend_api_url + "/contract/addresses/core").json()
+        addresses = res.get("addresses")
     return { **{x['name']: x['address'] for x in addresses} }
 
 def get_arbitrum_events_paginated(count_limit=500, skip=0):
-    res = requests.get(config.staking_backend_api_url + "/events/" + str(count_limit) + "/" + str(skip)).json()
-    events = res.get("events")
-    if events is None:
-        return []
-    return events, res.get("pagination")
+    events = []
+    pagination = { 'total': 0 }
+    if len(config.staking_backend_api_url) > 0:
+        res = requests.get(config.staking_backend_api_url + "/events/" + str(count_limit) + "/" + str(skip)).json()
+        events = res.get("events")
+        if events is None:
+            return events, pagination
+        pagination = res.get("pagination")
+    return events, pagination
 
 def get_arbitrum_info():
-    res = requests.get(config.staking_backend_api_url + "/arbitrum-info").json()
-    return res.get("info")
+    result = None
+    if len(config.staking_backend_api_url) > 0:
+        res = requests.get(config.staking_backend_api_url + "/arbitrum-info").json()
+        result = res.get("info")
+    return result
 
 @app.context_processor
 def template_globals():
