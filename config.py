@@ -41,6 +41,8 @@ lokinet_devnet_url='http://devnet.kcpyawm9se7trdbzncimdi5t7st4p5mh9i1mg7gkpuubi4
 # Staking Backend API URL:
 staking_backend_api_url=''
 arbitrum_explorer_base_url='https://arbiscan.io'
+arbitrum_rpc_url='https://arb1.arbitrum.io/rpc'
+arbitrum_sepolia_rpc_url='https://sepolia-rollup.arbitrum.io/rpc'
 
 # Staking info exclusion list
 staking_info_tags = {

@@ -22,6 +22,8 @@ import pysodium
 import nacl.encoding
 import nacl.hash
 import base58
+import enum
+import secrets
 from Cryptodome.Hash import keccak
 import config
 import local_config
@@ -37,6 +39,7 @@ else:
     git_rev = "(unknown)"
 
 app = flask.Flask(__name__)
+app.secret_key = secrets.token_hex(16)
 
 app.jinja_options['extensions'] = ['jinja2.ext.loopcontrols']
 
@@ -329,7 +332,6 @@ def template_globals():
             'revision': git_rev,
         },
     }
-
 
 @app.route('/page/<int:page>')
 @app.route('/page/<int:page>/<int:per_page>')
@@ -1076,6 +1078,168 @@ def api_circulating_supply():
             args={"height":0, "count":2**31-1}).get()
     return flask.jsonify((coinbase["emission_amount"] - coinbase["burn_amount"]) // 1_000_000_000 if coinbase else None)
 
+class NetworkType(enum.Enum):
+    Mainnet = 0
+    Stagenet = 1
+
+def get_token_addr(type: NetworkType) -> str:
+    result = '0x10Ea9E5303670331Bdddfa66A4cEA47dae4fcF3b'
+    if type == NetworkType.Stagenet:
+        result = '0x7D7fD4E91834A96cD9Fb2369E7f4EB72383bbdEd'
+    return result
+
+def get_reward_pool_addr(type: NetworkType) -> str:
+    result = '0x11f040E89dFAbBA9070FFE6145E914AC68DbFea0'
+    if type == NetworkType.Stagenet:
+        result = '0xaAD853fE7091728dac0DAa7b69990ee68abFC636'
+    return result
+
+def get_service_node_rewards_addr(type: NetworkType) -> str:
+    result = '0xC2B9fC251aC068763EbDfdecc792E3352E351c00'
+    if type == NetworkType.Stagenet:
+        result = '0x9d8aB00880CBBdc2Dcd29C179779469A82E7be35'
+    return result
+
+def get_balance_of(rpc_url: str, token_addr: str, wallet_addr: str) -> float:
+    assert wallet_addr.startswith("0x")
+    assert token_addr.startswith("0x")
+    assert len(wallet_addr) == 2 + (20 * 2)
+    assert len(token_addr)  == 2 + (20 * 2)
+
+    BALANCE_OF_FUNC_SELECTOR: str = "0x70a08231"                              # => keccak("balanceOf(address)")
+    padded_address:           str = wallet_addr[2:].zfill(64)                 # Pad the wallet address (remove '0x' and pad to 64 characters)
+    data:                     str = BALANCE_OF_FUNC_SELECTOR + padded_address # Construct the data payload for eth_call
+
+    payload: dict = {
+        "jsonrpc": "2.0",
+        "method": "eth_call",
+        "params": [ { "to": token_addr, "data": data }, "latest" ],
+        "id": 1
+    }
+
+    result: float = 0
+    try:
+        response = requests.post(rpc_url, json=payload, headers={"Content-Type": "application/json"})
+        response.raise_for_status()  # Raise an error for bad HTTP status codes
+        json_result = response.json()
+
+        if "error" in json_result: # Check for JSON-RPC errors
+            raise Exception(f"Error querying balanceOf 0x{wallet_addr} from token 0x{token_addr} via {rpc_url}: {result['error']}")
+
+        balance_hex = json_result["result"]
+        balance     = int(balance_hex, 16) # Hex -> integer
+        result      = balance
+    except Exception as e:
+        print(f"Error querying balanceOf 0x{wallet_addr} from token 0x{token_addr} via {rpc_url}: {e}")
+
+    return result
+
+class SESHCircSupplyCache:
+    amount:        float = 0
+    last_query_ts: float = 0
+
+    def to_dict(self):
+        return {'amount': self.amount, 'last_query_ts': self.last_query_ts}
+
+    @classmethod
+    def from_dict(cls, data):
+        result: SESHCircSupplyCache = SESHCircSupplyCache()
+        result.amount               = data['amount']
+        result.last_query_ts        = data['last_query_ts']
+        return result
+
+SESH_DECIMALS: int = 9
+
+@app.route('/api/sesh_circulating_supply')
+def api_sesh_circulating_supply():
+    sesh_circ_supply_key = 'sesh_circ_supply'
+    if sesh_circ_supply_key not in flask.session:
+        flask.session[sesh_circ_supply_key] = SESHCircSupplyCache().to_dict()
+
+    sesh_circ_supply_cache: SESHCircSupplyCache = SESHCircSupplyCache.from_dict(flask.session[sesh_circ_supply_key])
+    now                                         = time.time()
+    secs_since                                  = now - sesh_circ_supply_cache.last_query_ts
+
+    if secs_since > 60: # Cache result for 60s
+        sesh_circ_supply_cache.last_query_ts  = now
+        sesh_circ_supply_cache.amount         = 240_000_000 * (10**SESH_DECIMALS)
+
+        # Query network type
+        omq, oxend = omq_connection()
+        info       = FutureJSON(omq, oxend, 'rpc.get_info', 1).get()
+        network_type:     NetworkType = NetworkType.Mainnet
+        arbitrum_rpc_url: str         = config.arbitrum_rpc_url
+        if info['nettype'] != 'mainnet':
+            network_type     = NetworkType.Stagenet
+            arbitrum_rpc_url = config.arbitrum_sepolia_rpc_url
+
+        # Subtract the tokens locked in the reward pool
+        reward_pool_sesh_balance       = get_balance_of(rpc_url=arbitrum_rpc_url, token_addr=get_token_addr(network_type), wallet_addr=get_reward_pool_addr(network_type))
+        sn_rewards_sesh_balance        = get_balance_of(rpc_url=arbitrum_rpc_url, token_addr=get_token_addr(network_type), wallet_addr=get_service_node_rewards_addr(network_type))
+        sesh_circ_supply_cache.amount -= reward_pool_sesh_balance
+        sesh_circ_supply_cache.amount -= sn_rewards_sesh_balance
+
+        # Subtract the tokens locked up in investors/contracts
+        if network_type == NetworkType.Mainnet:
+            SEC_PER_YEAR: float                            = 60 * 60 * 24 * 365
+            tge_ts                                         = 1747749600                  # Estimated to 21 May 2025 00:00
+            lockup_a_staked_end_ts                         = tge_ts + (2 * SEC_PER_YEAR) # 2 year lockup
+
+            lockup_b_linear_vesting_ts                     = tge_ts + (1 * SEC_PER_YEAR) # Vested after 1 year for 1 year
+            lockup_b_linear_end_ts                         = tge_ts + (2 * SEC_PER_YEAR)
+
+            lockup_d_long_term_commit_vesting_ts           = tge_ts + (1 * SEC_PER_YEAR) # Vested after 1 year for 2 years
+            lockup_d_long_term_commit_end_ts               = tge_ts + (3 * SEC_PER_YEAR)
+
+            project_treasury_session_nodes_lockup_a        = 15_000_000 * (10**SESH_DECIMALS)
+            project_treasury_session_contributors_lockup_d = 11_000_000 * (10**SESH_DECIMALS)
+            project_treasury_advisors_lockup_b             = 1_000_000  * (10**SESH_DECIMALS)
+
+            project_treasury_operational_lockup_d          = 27_000_000 * (10**SESH_DECIMALS)
+            ecosystem_and_community_fund_lockup_d          = 14_000_000 * (10**SESH_DECIMALS)
+
+            if now < lockup_a_staked_end_ts: # Lockup A
+                sesh_circ_supply_cache.amount -= project_treasury_session_nodes_lockup_a
+
+            if now < lockup_b_linear_end_ts: # Lockup B
+                total_locked   = project_treasury_advisors_lockup_b;
+                total_unlocked = 0
+                if now > lockup_b_linear_vesting_ts:
+                    vest_duration            = lockup_b_linear_end_ts - lockup_b_linear_vesting_ts
+                    sesh_unlocked_per_second = total_locked / vest_duration
+                    total_unlocked           = (lockup_b_linear_end_ts - now) * sesh_unlocked_per_second
+
+                curr_locked                    = total_locked - total_unlocked
+                sesh_circ_supply_cache.amount -= curr_locked
+
+            if now < lockup_d_long_term_commit_end_ts: # Lockup D
+                total_locked   = project_treasury_operational_lockup_d + project_treasury_session_contributors_lockup_d + ecosystem_and_community_fund_lockup_d;
+                total_unlocked = 0
+
+                if now > lockup_d_long_term_commit_vesting_ts:
+                    vest_duration            = lockup_d_long_term_commit_end_ts - lockup_d_long_term_commit_vesting_ts
+                    sesh_unlocked_per_second = total_locked / vest_duration
+                    total_unlocked           = (lockup_d_long_term_commit_end_ts - now) * sesh_unlocked_per_second
+
+                curr_locked                    = total_locked - total_unlocked
+                sesh_circ_supply_cache.amount -= curr_locked
+
+
+            # Before TGE (and consequently before the contract is seeded w/ the converted OXEN
+            # stakes) we subtract the locked tokens via the SNL from the circulating supply.
+            #
+            # After the contract is seeded and the stakes are transferred as a SESH balance into the
+            # reward pool then subtracting the SESH balance of the reward pool and the rewards
+            # contract will account for locked tokens correctly.
+            if now < tge_ts:
+                snl = get_sns_future(omq, oxend).get()
+                snl_states = snl['service_node_states'] if 'service_node_states' in snl else []
+                sesh_circ_supply_cache.amount -= (25_000 * (10**SESH_DECIMALS)) * len(snl_states)
+
+        flask.session[sesh_circ_supply_key] = sesh_circ_supply_cache.to_dict()
+
+    result = flask.jsonify(int(sesh_circ_supply_cache.amount / 10**SESH_DECIMALS))
+    return result
 
 # FIXME: need better error handling here
 @app.route('/api/transaction/<hex64:txid>')
