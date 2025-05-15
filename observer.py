@@ -29,6 +29,64 @@ import config
 import local_config
 from lmq import FutureJSON, omq_connection, smq_connection
 
+class NetworkType(enum.Enum):
+    Nil      = 0
+    Mainnet  = 1
+    Stagenet = 2
+
+class ObserverSessionCache:
+    # Cache that is stored in the flash.session object which persists across different requests.
+    # This cache holds onto retrieved values and only periodically re-queries the values when a
+    # certain time has elapsed since the last query.
+    network_type:                           NetworkType = NetworkType.Nil
+    circ_supply:                            float       = 0
+    circ_supply_last_query_ts:              float       = 0
+    reward_pool_sesh_balance:               float       = 0
+    reward_pool_sesh_balance_last_query_ts: float       = 0
+    sn_rewards_sesh_balance:                float       = 0
+    sn_rewards_sesh_balance_last_query_ts:  float       = 0
+
+    def to_dict(self):
+        result: dict = {
+            'network_type':                           self.network_type.name,
+            'circ_supply':                            self.circ_supply,
+            'circ_supply_last_query_ts':              self.circ_supply_last_query_ts,
+            'reward_pool_sesh_balance':               self.reward_pool_sesh_balance,
+            'reward_pool_sesh_balance_last_query_ts': self.reward_pool_sesh_balance_last_query_ts,
+            'sn_rewards_sesh_balance':                self.sn_rewards_sesh_balance,
+            'sn_rewards_sesh_balance_last_query_ts':  self.sn_rewards_sesh_balance_last_query_ts,
+        }
+        return result
+
+    @classmethod
+    def from_dict(cls, data):
+        result: ObserverSessionCache                  = ObserverSessionCache()
+        result.network_type                           = NetworkType[data['network_type']] if 'network_type' in data else NetworkType.Nil
+        result.circ_supply                            = data['circ_supply']
+        result.circ_supply_last_query_ts              = data['circ_supply_last_query_ts']
+        result.reward_pool_sesh_balance               = data['reward_pool_sesh_balance']
+        result.reward_pool_sesh_balance_last_query_ts = data['reward_pool_sesh_balance_last_query_ts']
+        result.sn_rewards_sesh_balance                = data['sn_rewards_sesh_balance']
+        result.sn_rewards_sesh_balance_last_query_ts  = data['sn_rewards_sesh_balance_last_query_ts']
+        return result
+
+class ContractSESHBalances:
+    reward_pool_sesh_balance: float = 0
+    sn_rewards_sesh_balance:  float = 0
+
+class IndexHTMLRenderState:
+    # Mega struct containing the data used to render HTML via Jinja
+    balances:               ContractSESHBalances = ContractSESHBalances()
+    sesh_circ_supply_atoms: float                = 0
+    sn_rewards_addr:        str                  = ""
+    sn_contrib_factory:     str                  = ""
+    rewards_pool_addr:      str                  = ""
+    sesh_token_addr:        str                  = ""
+    arbiscan_url:           str                  = ""
+
+SESH_DECIMALS:              int = 9
+OBSERVER_SESSION_CACHE_KEY: str = 'observer_session_cache'
+
 # Make a dict of config.* to pass to templating
 conf = {x: getattr(config, x) for x in dir(config) if not x.startswith('__')}
 
@@ -38,9 +96,8 @@ if git_rev.returncode == 0:
 else:
     git_rev = "(unknown)"
 
-app = flask.Flask(__name__)
-app.secret_key = secrets.token_hex(16)
-
+app                             = flask.Flask(__name__)
+app.secret_key                  = secrets.token_hex(16)
 app.jinja_options['extensions'] = ['jinja2.ext.loopcontrols']
 
 class Hex64Converter(BaseConverter):
@@ -49,7 +106,6 @@ class Hex64Converter(BaseConverter):
         self.regex = "[0-9a-fA-F]{64}"
 
 app.url_map.converters['hex64'] = Hex64Converter
-
 
 @app.template_filter('format_datetime')
 def format_datetime(value, format='long'):
@@ -150,6 +206,10 @@ def format_oxen(atomic, tag_name='SESH', tag=True, fixed=False, decimals=9, zero
         disp += ' ' + tag_name
     return disp
 
+@app.template_filter('thousands_comma')
+def thousands_comma(str):
+    return "{:,}".format(str)
+
 @app.template_filter('percent')
 def percent(num, total, decimals=2):
     if total == 0:
@@ -175,18 +235,6 @@ def ellipsize(string, leading=10, trailing=5, ellipsis='...'):
     if len(string) <= leading + trailing + 3:
         return string
     return string[0:leading] + ellipsis + ('' if not trailing else string[-trailing:])
-
-@app.template_filter('explorer_link_tx')
-def explorer_link_tx(tx_hash):
-    return config.arbitrum_explorer_base_url + '/tx/' + tx_hash
-
-@app.template_filter('explorer_link_block')
-def explorer_link_block(block_number):
-    return config.arbitrum_explorer_base_url + '/block/' + str(block_number)
-
-@app.template_filter('explorer_link_address')
-def explorer_link_address(address):
-    return config.arbitrum_explorer_base_url + '/address/' + address
 
 @app.after_request
 def add_global_headers(response):
@@ -296,13 +344,6 @@ def parse_mempool(mempool_future):
         mp['txs'] = []
     return mp
 
-def get_contract_addresses():
-    addresses = []
-    if len(config.staking_backend_api_url) > 0:
-        res = requests.get(config.staking_backend_api_url + "/contract/addresses/core").json()
-        addresses = res.get("addresses")
-    return { **{x['name']: x['address'] for x in addresses} }
-
 def get_arbitrum_events_paginated(count_limit=500, skip=0):
     events = []
     pagination = { 'total': 0 }
@@ -345,14 +386,14 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None,
     omq, oxend = omq_connection()
     smq, sessiond = smq_connection()
 
-    inforeq = FutureJSON(omq, oxend, 'rpc.get_info', 1)
-    inforeq_sd = FutureJSON(smq, sessiond, 'rpc.get_last_block_header', args={'fill_pow_hash': False, 'get_tx_hashes': False },cache_seconds=1)
-    stake = FutureJSON(omq, oxend, 'rpc.get_staking_requirement', 10)
-    base_fee = FutureJSON(omq, oxend, 'rpc.get_fee_estimate', 10)
-    hfinfo = FutureJSON(omq, oxend, 'rpc.hard_fork_info', 10)
-    accrued = FutureJSON(omq, oxend, 'rpc.get_accrued_batched_earnings', 1)
-    mempool = get_mempool_future(omq, oxend)
-    sns = get_sns_future(omq, oxend)
+    inforeq     = FutureJSON(omq, oxend, 'rpc.get_info', 1)
+    inforeq_sd  = FutureJSON(smq, sessiond, 'rpc.get_last_block_header', args={'fill_pow_hash': False, 'get_tx_hashes': False },cache_seconds=1)
+    stake       = FutureJSON(omq, oxend, 'rpc.get_staking_requirement', 10)
+    base_fee    = FutureJSON(omq, oxend, 'rpc.get_fee_estimate', 10)
+    hfinfo      = FutureJSON(omq, oxend, 'rpc.hard_fork_info', 10)
+    accrued     = FutureJSON(omq, oxend, 'rpc.get_accrued_batched_earnings', 1)
+    mempool     = get_mempool_future(omq, oxend)
+    sns         = get_sns_future(omq, oxend)
     checkpoints = FutureJSON(omq, oxend, 'rpc.get_checkpoints', args={"count": 3})
 
     # This call is slow the first time it gets called in oxend but will be fast after that, so call
@@ -407,6 +448,8 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None,
         }).get()['headers']
 
     arbitrum_events, arbitrum_events_pagination = get_arbitrum_events_paginated(count_limit=min(per_event_page,config.max_blocks_per_page), skip=event_page*per_event_page)
+    if len(arbitrum_events) > 0:
+        print("@@@@@ ", arbitrum_events[0])
 
     # If 'txs' is already there then it is probably left over from our cached previous call through
     # here.
@@ -440,15 +483,23 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None,
 
     accrued = accrued.get()
     accrued_total = (
-            sum(amt for wallet, amt in accrued['balances'].items()) if 'balances' in accrued else
+            sum(amt for _, amt in accrued['balances'].items()) if 'balances' in accrued else
             sum(accrued['amounts']))
 
-    arbitrum_addresses = get_contract_addresses()
+    network_type: NetworkType           = get_network_type()
+    render_state: IndexHTMLRenderState  = IndexHTMLRenderState()
+    render_state.balances               = get_contract_sesh_balances()
+    render_state.sesh_circ_supply_atoms = get_sesh_circulating_supply_atoms()
+    render_state.sn_rewards_addr        = get_service_node_rewards_addr(network_type)
+    render_state.sn_contrib_factory     = get_service_node_contrib_factory_addr(network_type)
+    render_state.rewards_pool_addr      = get_reward_pool_addr(network_type)
+    render_state.sesh_token_addr        = get_token_addr(network_type)
+    render_state.arbiscan_url           = "https://sepolia.arbiscan.io" if network_type == NetworkType.Stagenet else "https://arbiscan.io"
 
     return flask.render_template('index.html',
             info=info,
             info_sd=info_sd,
-            arbitrum_info=get_arbitrum_info(),
+            render_state=render_state,
             stake=stake.get(),
             fees=base_fee.get(),
             emission=coinbase.get(),
@@ -461,7 +512,6 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None,
             blocks=blocks,
             arbitrum_events=arbitrum_events,
             arbitrum_events_pagination=arbitrum_events_pagination,
-            arbitrum_addresses=arbitrum_addresses,
             block_size_median=statistics.median(b['block_size'] for b in blocks),
             page=page,
             per_page=per_page,
@@ -1078,27 +1128,30 @@ def api_circulating_supply():
             args={"height":0, "count":2**31-1}).get()
     return flask.jsonify((coinbase["emission_amount"] - coinbase["burn_amount"]) // 1_000_000_000 if coinbase else None)
 
-class NetworkType(enum.Enum):
-    Mainnet = 0
-    Stagenet = 1
-
 def get_token_addr(type: NetworkType) -> str:
-    result = '0x10Ea9E5303670331Bdddfa66A4cEA47dae4fcF3b'
+    result = '0x10Ea9E5303670331Bdddfa66A4cEA47dae4fcF3b' # Mainnet
     if type == NetworkType.Stagenet:
         result = '0x7D7fD4E91834A96cD9Fb2369E7f4EB72383bbdEd'
     return result
 
 def get_reward_pool_addr(type: NetworkType) -> str:
-    result = '0x11f040E89dFAbBA9070FFE6145E914AC68DbFea0'
+    result = '0x11f040E89dFAbBA9070FFE6145E914AC68DbFea0' # Mainnet
     if type == NetworkType.Stagenet:
         result = '0xaAD853fE7091728dac0DAa7b69990ee68abFC636'
     return result
 
 def get_service_node_rewards_addr(type: NetworkType) -> str:
-    result = '0xC2B9fC251aC068763EbDfdecc792E3352E351c00'
+    result = '0xC2B9fC251aC068763EbDfdecc792E3352E351c00' # Mainnet
     if type == NetworkType.Stagenet:
         result = '0x9d8aB00880CBBdc2Dcd29C179779469A82E7be35'
     return result
+
+def get_service_node_contrib_factory_addr(type: NetworkType) -> str:
+    result = '0x8129bE2D5eF7ACd39483C19F28DE86b7EF19DBCA' # Mainnet
+    if type == NetworkType.Stagenet:
+        result = '0x36Ee2Da54a7E727cC996A441826BBEdda6336B71'
+    return result
+
 
 def get_balance_of(rpc_url: str, token_addr: str, wallet_addr: str) -> float:
     assert wallet_addr.startswith("0x")
@@ -1124,7 +1177,7 @@ def get_balance_of(rpc_url: str, token_addr: str, wallet_addr: str) -> float:
         json_result = response.json()
 
         if "error" in json_result: # Check for JSON-RPC errors
-            raise Exception(f"Error querying balanceOf 0x{wallet_addr} from token 0x{token_addr} via {rpc_url}: {result['error']}")
+            raise Exception(f"Error querying balanceOf {wallet_addr} from token {token_addr} via {rpc_url}: {result['error']}")
 
         balance_hex = json_result["result"]
         balance     = int(balance_hex, 16) # Hex -> integer
@@ -1134,53 +1187,81 @@ def get_balance_of(rpc_url: str, token_addr: str, wallet_addr: str) -> float:
 
     return result
 
-class SESHCircSupplyCache:
-    amount:        float = 0
-    last_query_ts: float = 0
+def get_session_cache() -> ObserverSessionCache:
+    # We use a cache provided by Flask which persists throughout the application lifetime instead of
+    # the default, per-request lifetime of objects. This means we can re-use previously calculated
+    # values.
+    #
+    # To achieve this we store a serialised dict of our "global" object that contains essentially
+    # the state of the program that should persist throughout the lifetime of the application.
+    #
+    # This is stored in a cookie encrypted by the secret key we assigned at the start of the
+    # program. This should work up to around 4KiB (which should be enough).
+    if OBSERVER_SESSION_CACHE_KEY not in flask.session:
+        flask.session[OBSERVER_SESSION_CACHE_KEY] = ObserverSessionCache().to_dict()
+    result = ObserverSessionCache.from_dict(flask.session[OBSERVER_SESSION_CACHE_KEY])
 
-    def to_dict(self):
-        return {'amount': self.amount, 'last_query_ts': self.last_query_ts}
+    return result
 
-    @classmethod
-    def from_dict(cls, data):
-        result: SESHCircSupplyCache = SESHCircSupplyCache()
-        result.amount               = data['amount']
-        result.last_query_ts        = data['last_query_ts']
-        return result
+def store_session_cache(cache: ObserverSessionCache):
+    flask.session[OBSERVER_SESSION_CACHE_KEY] = cache.to_dict()
 
-SESH_DECIMALS: int = 9
+def get_network_type() -> NetworkType:
+    cache: ObserverSessionCache = get_session_cache()
+    if cache.network_type == NetworkType.Nil:
+        omq, oxend          = omq_connection()
+        info                = FutureJSON(omq, oxend, 'rpc.get_info', 1).get()
+        if info is not None:
+            if info['nettype'] == 'mainnet':
+                cache.network_type = NetworkType.Mainnet
+            else:
+                cache.network_type = NetworkType.Stagenet
+            store_session_cache(cache)
 
-@app.route('/api/sesh_circulating_supply')
-def api_sesh_circulating_supply():
-    sesh_circ_supply_key = 'sesh_circ_supply'
-    if sesh_circ_supply_key not in flask.session:
-        flask.session[sesh_circ_supply_key] = SESHCircSupplyCache().to_dict()
+    result = cache.network_type
+    return result
 
-    sesh_circ_supply_cache: SESHCircSupplyCache = SESHCircSupplyCache.from_dict(flask.session[sesh_circ_supply_key])
-    now                                         = time.time()
-    secs_since                                  = now - sesh_circ_supply_cache.last_query_ts
+def get_contract_sesh_balances() -> ContractSESHBalances:
+    network_type:     NetworkType = get_network_type()
+    now:              float       = time.time()
+
+    cache:                 ObserverSessionCache = get_session_cache()
+    pool_secs_since:       float                = now - cache.reward_pool_sesh_balance_last_query_ts
+    sn_rewards_secs_since: float                = now - cache.sn_rewards_sesh_balance_last_query_ts
+    if pool_secs_since > 60 or sn_rewards_secs_since > 60:
+        arbitrum_rpc_url: str = config.arbitrum_rpc_url if get_network_type() == NetworkType.Mainnet else config.arbitrum_sepolia_rpc_url
+        token_addr:       str = get_token_addr(network_type)
+        if pool_secs_since > 60:
+            cache.reward_pool_sesh_balance               = get_balance_of(rpc_url=arbitrum_rpc_url, token_addr=token_addr, wallet_addr=get_reward_pool_addr(network_type))
+            cache.reward_pool_sesh_balance_last_query_ts = now
+
+        if sn_rewards_secs_since > 60:
+            cache.sn_rewards_sesh_balance               = get_balance_of(rpc_url=arbitrum_rpc_url, token_addr=token_addr, wallet_addr=get_service_node_rewards_addr(network_type))
+            cache.sn_rewards_sesh_balance_last_query_ts = now
+
+        store_session_cache(cache)
+
+    result: ContractSESHBalances    = ContractSESHBalances()
+    result.reward_pool_sesh_balance = cache.reward_pool_sesh_balance
+    result.sn_rewards_sesh_balance  = cache.sn_rewards_sesh_balance
+    return result
+
+def get_sesh_circulating_supply_atoms() -> float:
+    session_cache: ObserverSessionCache = get_session_cache()
+    now:           float                = time.time()
+    secs_since                          = now - session_cache.circ_supply_last_query_ts
 
     if secs_since > 60: # Cache result for 60s
-        sesh_circ_supply_cache.last_query_ts  = now
-        sesh_circ_supply_cache.amount         = 240_000_000 * (10**SESH_DECIMALS)
-
-        # Query network type
-        omq, oxend = omq_connection()
-        info       = FutureJSON(omq, oxend, 'rpc.get_info', 1).get()
-        network_type:     NetworkType = NetworkType.Mainnet
-        arbitrum_rpc_url: str         = config.arbitrum_rpc_url
-        if info['nettype'] != 'mainnet':
-            network_type     = NetworkType.Stagenet
-            arbitrum_rpc_url = config.arbitrum_sepolia_rpc_url
+        session_cache.circ_supply_last_query_ts = now
+        session_cache.circ_supply               = 240_000_000 * (10**SESH_DECIMALS)
 
         # Subtract the tokens locked in the reward pool
-        reward_pool_sesh_balance       = get_balance_of(rpc_url=arbitrum_rpc_url, token_addr=get_token_addr(network_type), wallet_addr=get_reward_pool_addr(network_type))
-        sn_rewards_sesh_balance        = get_balance_of(rpc_url=arbitrum_rpc_url, token_addr=get_token_addr(network_type), wallet_addr=get_service_node_rewards_addr(network_type))
-        sesh_circ_supply_cache.amount -= reward_pool_sesh_balance
-        sesh_circ_supply_cache.amount -= sn_rewards_sesh_balance
+        contracts                  = get_contract_sesh_balances() # Retrieve from cache
+        session_cache.circ_supply -= contracts.reward_pool_sesh_balance
+        session_cache.circ_supply -= contracts.sn_rewards_sesh_balance
 
         # Subtract the tokens locked up in investors/contracts
-        if network_type == NetworkType.Mainnet:
+        if get_network_type() == NetworkType.Mainnet:
             SEC_PER_YEAR: float                            = 60 * 60 * 24 * 365
             tge_ts                                         = 1747749600                  # Estimated to 21 May 2025 00:00
             lockup_a_staked_end_ts                         = tge_ts + (2 * SEC_PER_YEAR) # 2 year lockup
@@ -1199,7 +1280,7 @@ def api_sesh_circulating_supply():
             ecosystem_and_community_fund_lockup_d          = 14_000_000 * (10**SESH_DECIMALS)
 
             if now < lockup_a_staked_end_ts: # Lockup A
-                sesh_circ_supply_cache.amount -= project_treasury_session_nodes_lockup_a
+                session_cache.circ_supply -= project_treasury_session_nodes_lockup_a
 
             if now < lockup_b_linear_end_ts: # Lockup B
                 total_locked   = project_treasury_advisors_lockup_b;
@@ -1210,7 +1291,7 @@ def api_sesh_circulating_supply():
                     total_unlocked           = (lockup_b_linear_end_ts - now) * sesh_unlocked_per_second
 
                 curr_locked                    = total_locked - total_unlocked
-                sesh_circ_supply_cache.amount -= curr_locked
+                session_cache.circ_supply -= curr_locked
 
             if now < lockup_d_long_term_commit_end_ts: # Lockup D
                 total_locked   = project_treasury_operational_lockup_d + project_treasury_session_contributors_lockup_d + ecosystem_and_community_fund_lockup_d;
@@ -1222,7 +1303,7 @@ def api_sesh_circulating_supply():
                     total_unlocked           = (lockup_d_long_term_commit_end_ts - now) * sesh_unlocked_per_second
 
                 curr_locked                    = total_locked - total_unlocked
-                sesh_circ_supply_cache.amount -= curr_locked
+                session_cache.circ_supply -= curr_locked
 
 
             # Before TGE (and consequently before the contract is seeded w/ the converted OXEN
@@ -1232,13 +1313,21 @@ def api_sesh_circulating_supply():
             # reward pool then subtracting the SESH balance of the reward pool and the rewards
             # contract will account for locked tokens correctly.
             if now < tge_ts:
-                snl = get_sns_future(omq, oxend).get()
-                snl_states = snl['service_node_states'] if 'service_node_states' in snl else []
-                sesh_circ_supply_cache.amount -= (25_000 * (10**SESH_DECIMALS)) * len(snl_states)
+                omq, oxend = omq_connection()
+                snl        = get_sns_future(omq, oxend).get()
+                if snl is not None:
+                    snl_states = snl['service_node_states'] if 'service_node_states' in snl else []
+                    session_cache.circ_supply -= (25_000 * (10**SESH_DECIMALS)) * len(snl_states)
 
-        flask.session[sesh_circ_supply_key] = sesh_circ_supply_cache.to_dict()
+        store_session_cache(session_cache)
 
-    result = flask.jsonify(int(sesh_circ_supply_cache.amount / 10**SESH_DECIMALS))
+    result = session_cache.circ_supply
+    return result
+
+@app.route('/api/sesh_circulating_supply')
+def api_sesh_circulating_supply_atoms():
+    supply = get_sesh_circulating_supply_atoms()
+    result = flask.jsonify(int(supply / 10**SESH_DECIMALS))
     return result
 
 # FIXME: need better error handling here

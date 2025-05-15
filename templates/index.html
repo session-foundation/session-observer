@@ -30,8 +30,8 @@
 
         {% if info %}
             <h3 class="general_info info_list nowrap-spans">
-                <span><label>Height:</label> {{info.height}}</span>
-                <span><label>L2 Height:</label> {% if 'l2_height' in info_sd%}{{info_sd.l2_height}}{%else%}N/A{%endif%}</span>
+                <span><label>Height:</label> {{ info.height | thousands_comma }}</span>
+                <span><label>L2 Height:</label> {% if 'l2_height' in info_sd%}{{ info_sd.l2_height | thousands_comma }}{%else%}N/A{%endif%}</span>
                 <span><label>Hard fork:</label> v{{hf.version}}{%if 'revision' in hf%}.{{hf.revision}}{%endif%}</span>
                 {% if hf.version >= 16 %}
                     <span title="{{ info.pulse_target_timestamp | from_timestamp | format_datetime }}
@@ -56,19 +56,19 @@
         {% endif %}
 
         <h4 class="info_list nowrap-spans">
-            <span><label>Reward Rate Pool balance</label>{{ components.tooltip("Arbitrum data is currently sourced from the Session Testnet.") }}:
-                {% if not arbitrum_info or 'balance_reward_rate_pool' not in arbitrum_info %}
-                    (loading...)
-                {% else %}
-                    {{arbitrum_info.balance_reward_rate_pool | cash(decimals=2, formatted=True)}}
-                {%endif%}
+            <span>
+                <label><a href="{{ render_state.arbiscan_url }}/token/{{ render_state.sesh_token_addr }}">SESH Circulating Supply</a></label>
+                {{ render_state.sesh_circ_supply_atoms | cash(decimals=2, formatted=True)}}
             </span>
-            <span><label>Session Node Rewards balance</label>{{ components.tooltip("Arbitrum data is currently sourced from the Session Testnet.") }}:
-                {% if not arbitrum_info or 'balance_service_node_rewards' not in arbitrum_info %}
-                    (loading...)
-                {% else %}
-                    {{arbitrum_info.balance_service_node_rewards | cash(decimals=2, formatted=True)}}
-                {%endif%}
+            <span>
+                <label><a href="{{ render_state.arbiscan_url }}/address/{{ render_state.rewards_pool_addr }}">Rewards Pool</a></label>
+                {{ render_state.balances.reward_pool_sesh_balance | cash(decimals=2, formatted=True) }}
+            </span>
+            <span>
+                <label><a href="{{ render_state.arbiscan_url }}/address/{{ render_state.sn_rewards_addr }}">Session Node Rewards</a></label>
+            </span>
+            <span>
+                <label><a href="{{ render_state.arbiscan_url }}/address/{{ render_state.sn_contrib_factory }}">Session Multicontributor Factory</a></label>
             </span>
         </h4>
 
@@ -95,8 +95,7 @@
             {{ components.tooltip("Arbitrum events are currently sourced from the Session Testnet.") }}
         </h2>
         <h4 class="general_info info_list nowrap-spans Subtitle">
-            <span><label>L2 Height:</label> {% if 'l2_height' in info_sd%}{{info_sd.l2_height}}{%else%}N/A{%endif%}</span>
-            <span><label>Total Events:</label> {{ arbitrum_events_pagination.total }}</span>
+            <span><label>Total Events:</label> {{ arbitrum_events_pagination.total | thousands_comma }}</span>
         </h4>
         <h4 class="Subtitle">
         </h4>
@@ -108,7 +107,6 @@
             <thead>
             <tr>
                 <td>L2 Height</td>
-                <td>Age [h:m:s]</td>
                 <td>Type</td>
                 <td>Transaction Hash</td>
                 <td>Contract</td>
@@ -118,15 +116,14 @@
             {% import 'include/arb_event_symbol.html' as event_symbol %}
             {% for e in arbitrum_events %}
                 <tr class="block">
-                    <td><a href="{{e.block | explorer_link_block}}">{{e.block}}</a></td>
-                    <td aria-label="{{e.timestamp | format_datetime}}"><div class="tooltip">{{e.timestamp | from_timestamp | ago}}<span class="tooltip-text">{{e.timestamp | from_timestamp | format_datetime}}</span></div></td>
+                    <td><a href="{{ render_state.arbiscan_url }}/block/{{ e.block }}">{{ e.block | thousands_comma }}</a></td>
                     <td aria-label="{{ e.name }}">{{event_symbol.display_event(e)}}</td>
-                    <td><a href="{{e.tx| explorer_link_tx}}">{{e.tx}}</a></td>
+                    <td><a href="{{ render_state.arbiscan_url }}/tx/0x{{ e.tx }}">{{e.tx}}</a></td>
                     <td>
                         {% if e.name == 'NewServiceNodeV2' or e.name == 'ServiceNodeExitRequest' or e.name == 'ServiceNodeExit' or e.name == 'ServiceNodeLiquidated' or e.name == 'RewardsClaimed' -%}
-                            <a href="{{arbitrum_addresses['ServiceNodeRewards'] | explorer_link_address}}">Session Node Rewards</a>
+                            <a href="{{ render_state.arbiscan_url }}/address/{{ render_state.sn_rewards_addr }}">Session Node Rewards</a>
                         {% elif e.name == 'NewServiceNodeContributionContract' -%}
-                            <a href="{{arbitrum_addresses['ServiceNodeContributionFactory'] | explorer_link_address}}">Session Node Contribution Factory</a>
+                            <a href="{{ render_state.arbiscan_url }}/address/{{ render_state.sn_contrib_factory }}">Session Multicontributor</a>
                         {% endif -%}
                     </td>
                 </tr>
@@ -200,7 +197,7 @@
               {% if b.txs | length > 0 and b.txs[0].coinbase %}
                 {% set tx_i = 1 %}
                 <tr class="block">
-                  <td><a href="/block/{{b.height}}">{{b.height}}</a></td>
+                  <td><a href="/block/{{b.height}}">{{ b.height | thousands_comma }}</a></td>
                   <td title="{{b.timestamp | from_timestamp | format_datetime}}">{{b.timestamp | from_timestamp | ago}}</td>
                   <td>{{b.block_size | si}}</td>
                   <td>{{symbol.display(b.txs[0])}}</td>
@@ -213,7 +210,7 @@
               {% else %}
                 {# no miner tx, e.g. from batching #}
                 <tr class="block">
-                  <td><a href="/block/{{b.height}}">{{b.height}}</a></td>
+                  <td><a href="/block/{{ b.height }}">{{ b.height | thousands_comma }}</a></td>
                   <td title="{{b.timestamp | from_timestamp | format_datetime}}">{{b.timestamp | from_timestamp | ago}}</td>
                   <td>{{b.block_size | si}}</td>
                   <td></td>
