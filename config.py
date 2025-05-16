@@ -12,37 +12,36 @@ import oxenmq
 # LMQ RPC endpoint of oxend; can be a unix socket 'ipc:///path/to/oxend.sock' (preferred) or a tcp
 # socket 'tcp://127.0.0.1:5678'.  Typically you want this running with admin permission.
 # Leave this as None here, and set it for each observer in the mainnet.py/testnet.py/etc. script.
-sessiond_rpc = None
-oxend_rpc = None
+sessiond_rpc             = None
+oxend_rpc                = None
 
 # Default blocks per page for the index.
-blocks_per_page=20
+blocks_per_page          = 20
 # Maximum blocks per page a user can request
-max_blocks_per_page=500
+max_blocks_per_page      = 500
 
 # Some display and/or feature options:
-pusher=False
-key_image_checker=False
-output_key_checker=False
-autorefresh_option=True
-enable_mixins_details=True
+pusher                   = False
+key_image_checker        = False
+output_key_checker       = False
+autorefresh_option       = True
+enable_mixins_details    = True
 
 # URLs to networks other than the one we are on:
-mainnet_url='https://oxen.observer'
-testnet_url='https://testnet.oxen.observer'
-devnet_url='https://devnet.oxen.observer'
-stagenet_url='https://stagenet.oxen.observer'
+mainnet_url              = 'https://oxen.observer'
+testnet_url              = 'https://testnet.oxen.observer'
+devnet_url               = 'https://devnet.oxen.observer'
+stagenet_url             = 'https://stagenet.oxen.observer'
 
 # Same as above, but these apply if we are on a .loki URL:
-lokinet_mainnet_url='http://blocks.loki'
-lokinet_testnet_url='http://testnet.loki'
-lokinet_devnet_url='http://devnet.kcpyawm9se7trdbzncimdi5t7st4p5mh9i1mg7gkpuubi4k4ku1y.loki'
+lokinet_mainnet_url      = 'http://blocks.loki'
+lokinet_testnet_url      = 'http://testnet.loki'
+lokinet_devnet_url       = 'http://devnet.kcpyawm9se7trdbzncimdi5t7st4p5mh9i1mg7gkpuubi4k4ku1y.loki'
 
 # Staking Backend API URL:
-staking_backend_api_url=''
-arbitrum_explorer_base_url='https://arbiscan.io'
-arbitrum_rpc_url='https://arb1.arbitrum.io/rpc'
-arbitrum_sepolia_rpc_url='https://sepolia-rollup.arbitrum.io/rpc'
+staking_backend_api_url  = ''
+arbitrum_rpc_url         = 'https://arb1.arbitrum.io/rpc'
+arbitrum_sepolia_rpc_url = 'https://sepolia-rollup.arbitrum.io/rpc'
 
 # Staking info exclusion list
 staking_info_tags = {
