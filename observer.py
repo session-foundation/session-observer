@@ -448,8 +448,6 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None,
         }).get()['headers']
 
     arbitrum_events, arbitrum_events_pagination = get_arbitrum_events_paginated(count_limit=min(per_event_page,config.max_blocks_per_page), skip=event_page*per_event_page)
-    if len(arbitrum_events) > 0:
-        print("@@@@@ ", arbitrum_events[0])
 
     # If 'txs' is already there then it is probably left over from our cached previous call through
     # here.

@@ -19,8 +19,8 @@
             <span class="icon">🎁{%if text%} claim rewards{%endif%}</span>
             <span class="tooltip-text">Claim Rewards</span>
         {% else -%}
-            <span class="icon">❓{%if text%} unknown event {{ event.name }}{%endif%}</span>
-            <span class="tooltip-text">Unknown Arbitrum event {{ event.name }}</span>
+            <span class="icon">❓{%if text%}{{ event.name }}{%endif%}</span>
+            <span class="tooltip-text">{{ event.name }}</span>
         {% endif -%}
     </div>
 {% endmacro -%}
