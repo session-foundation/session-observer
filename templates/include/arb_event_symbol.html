@@ -1,26 +1,155 @@
-{%- macro display_event(event, text=false) -%}
-    <div class="tooltip">
-        {% if event.name == 'NewServiceNodeV2' -%}
-            <span class="icon">🏁{%if text%} registration{%endif%}</span>
-            <span class="tooltip-text">Session Node registration</span>
-        {% elif event.name == 'ServiceNodeExitRequest' -%}
-            <span class="icon">🔑{%if text%} stake exit request{%endif%}</span>
-            <span class="tooltip-text">Session Node stake exit request</span>
-        {% elif event.name == 'ServiceNodeExit' -%}
-            <span class="icon">🔓{%if text%} stake exit{%endif%}</span>
-            <span class="tooltip-text">Session Node stake exit</span>
-        {% elif event.name == 'ServiceNodeLiquidated' -%}
-            <span class="icon">🧹{%if text%} stake liquidation{%endif%}</span>
-            <span class="tooltip-text">Session Node stake liquidation</span>
-        {% elif event.name == 'NewServiceNodeContributionContract' -%}
-            <span class="icon">📜{%if text%} multicontributor contract deploy{%endif%}</span>
-            <span class="tooltip-text">Session Node Multicontributor Contract Deploy</span>
-        {% elif event.name == 'RewardsClaimed' -%}
-            <span class="icon">🎁{%if text%} claim rewards{%endif%}</span>
-            <span class="tooltip-text">Claim Rewards</span>
-        {% else -%}
-            <span class="icon">❓{%if text%}{{ event.name }}{%endif%}</span>
-            <span class="tooltip-text">{{ event.name }}</span>
-        {% endif -%}
-    </div>
+{%- macro display_event(event, render_state, text=false, action=false) -%}
+    {% if event.name == 'NewServiceNodeV2' -%}
+        {% if action -%}
+            {% if (event.args.contributors | length) == 0 %}
+                New SN 0x{{ event.args.serviceNode.serviceNodePubkey | bigint_to_hex | dot_truncate(size=5) }} w/ ID {{ event.main_arg }} (solo)
+            {% else %}
+                New SN 0x{{ event.args.serviceNode.serviceNodePubkey | bigint_to_hex | dot_truncate(size=5) }} w/ ID {{ event.main_arg }} and {{ event.args.contributors | length }} contributors registered
+            {% endif %}
+        {% else %}
+            <div class="tooltip">
+                <span class="icon">🏁{%if text%} Registration{%endif%}</span>
+                <span class="tooltip-text">Session Node Registration</span>
+            </div>
+        {% endif %}
+    {% elif event.name == 'ServiceNodeExitRequest' -%}
+        {% if action -%}
+            <a href="{{ render_state.arbiscan_url }}/address/{{ event.args.initiator }}"> {{ event.args.initiator | dot_truncate(size=5) }}</a> requested exit on SN {{ event.main_arg }} (bls: 0x{{ event.args.pubkey.X | bigint_to_hex | dot_truncate(size=3) }} 0x{{ event.args.pubkey.Y | bigint_to_hex | dot_truncate(size=3) }})
+        {% else %}
+            <div class="tooltip">
+                <span class="icon">🔑{%if text%} Stake Exit Request{%endif%}</span>
+                <span class="tooltip-text">Session Node Stake Exit Request</span>
+            </div>
+        {% endif %}
+    {% elif event.name == 'ServiceNodeExit' -%}
+        {%if action -%}
+        {% else %}
+            <div class="tooltip">
+                <span class="icon">🔓{%if text%} Stake Exit{%endif%}</span>
+                <span class="tooltip-text">Session Node Stake Exit</span>
+            </div>
+        {% endif %}
+    {% elif event.name == 'ServiceNodeLiquidated' -%}
+        {%if action -%}
+        {% else %}
+            <div class="tooltip">
+                <span class="icon">🧹{%if text%} Stake Liquidation{%endif%}</span>
+                <span class="tooltip-text">Session Node Stake Liquidation</span>
+            </div>
+        {% endif %}
+    {% elif event.name == 'NewServiceNodeContributionContract' -%}
+        {%if action -%}
+            New multicontrib contract <a href="https://stake.getsession.org/stake/{{ event.main_arg }}">{{ event.main_arg | dot_truncate(size=5) }}</a> w/ operator <a href="{{ render_state.arbiscan_url }}/address/{{ event.args.operator }}">{{ event.args.operator | dot_truncate(size=5) }}</a> and SN key <a href="sn/{{ event.args.serviceNodePubkey | bigint_to_hex }}">0x{{ event.args.serviceNodePubkey | bigint_to_hex | dot_truncate(size=3) }}</a> deployed
+        {% else %}
+            <div class="tooltip">
+                <span class="icon">📜{%if text%} Deploy Multicontributor Contract{%endif%}</span>
+                <span class="tooltip-text">Deploy Multicontributor Contract</span>
+            </div>
+        {% endif %}
+    {% elif event.name == 'RewardsClaimed' -%}
+        {%if action -%}
+            <a href="{{ render_state.arbiscan_url }}/address/{{ event.args.recipientAddress }}">{{ event.args.recipientAddress | dot_truncate(size=5) }}</a> claimed {{ event.args.amount | cash}}
+        {% else %}
+            <div class="tooltip">
+                <span class="icon">🎁{%if text%} Claim Rewards{%endif%}</span>
+                <span class="tooltip-text">Claim Rewards</span>
+            </div>
+        {% endif %}
+    {% elif event.name == 'UpdateReservedContributors' -%}
+        {%if action -%}
+            {% if event.args.newReservedContributors | length == 0 -%}
+                Remove reserved contributors for multicontrib contract <a href="https://stake.getsession.org/stake/{{ event.main_arg }}">{{ event.main_arg | dot_truncate(size=5) }}</a>
+            {% else %}
+                Set {{ event.args.newReservedContributors | length }} reserved contributors for multicontrib contract <a href="https://stake.getsession.org/stake/{{ event.main_arg }}">{{ event.main_arg | dot_truncate(size=5) }}</a>
+            {% endif %}
+        {% else %}
+        <div class="tooltip">
+            <span class="icon">📥{%if text%} Assign Reserved Slots On Multicontributor Node{%endif%}</span>
+            <span class="tooltip-text">Assign Reserved Slots On Multicontributor Node</span>
+        </div>
+        {% endif %}
+    {% elif event.name == 'UpdateFee' -%}
+        {%if action -%}
+            Updated multicontrib contract <a href="https://stake.getsession.org/stake/{{ event.main_arg }}">{{ event.main_arg | dot_truncate(size=5) }}</a> fee to {{ event.args.newFee / 100 }}%
+        {% else %}
+            <div class="tooltip">
+                <span class="icon">🧮{%if text%} Update Fee On Multicontributor Node{%endif%}</span>
+                <span class="tooltip-text">Update Fee On Multicontributor Node</span>
+            </div>
+        {% endif %}
+    {% elif event.name == 'OpenForPublicContribution' -%}
+        {%if action -%}
+            Multicontrib contract <a href="https://stake.getsession.org/stake/{{ event.main_arg }}">{{ event.main_arg | dot_truncate(size=5) }}</a> is open for contribution
+        {% else %}
+            <div class="tooltip">
+                <span class="icon">📖{%if text%} Multicontributor Node Ready For Contribution{%endif%}</span>
+                <span class="tooltip-text">Multicontributor Node Ready For Contribution</span>
+            </div>
+        {% endif %}
+    {% elif event.name == 'UpdatePubkeys' -%}
+        {%if action -%}
+            Set keys (bls: {{ event.args.newBLSPubkey.X | bigint_to_hex | dot_truncate(size=3) }} {{ event.args.newBLSPubkey.Y | bigint_to_hex | dot_truncate(size=3) }}, ed: <a href="sn/{{ event.args.newEd25519Pubkey | bigint_to_hex }}">0x{{ event.args.newEd25519Pubkey | bigint_to_hex | dot_truncate(size=3) }}</a>) for multicontrib contract <a href="https://stake.getsession.org/stake/{{ event.main_arg }}">{{ event.main_arg | dot_truncate(size=5) }}</a>
+        {% else %}
+            <div class="tooltip">
+                <span class="icon">🪧{%if text%} Update Multicontibutor Node Keys{%endif%}</span>
+                <span class="tooltip-text">Update Multicontributor Keys</span>
+            </div>
+        {% endif %}
+    {% elif event.name == 'UpdateManualFinalize' -%}
+        {%if action -%}
+            Set multicontrib contract <a href="https://stake.getsession.org/stake/{{ event.main_arg }}">{{ event.main_arg | dot_truncate(size=5) }}</a> manual finalize to {{ event.args.newValue | lower }}
+        {% else %}
+        <div class="tooltip">
+            <span class="icon">🖋️{%if text%} Update Multicontributor Node Auto-Finalize Flag{%endif%}</span>
+            <span class="tooltip-text">Update Multicontributor Auto-Finalize Flag</span>
+        </div>
+        {% endif %}
+    {% elif event.name == 'NewContribution' -%}
+        {%if action -%}
+            <a href="{{ render_state.arbiscan_url }}/address/{{ event.args.contributor }}">{{ event.args.contributor | dot_truncate(size=5) }}</a> contributed {{ event.args.amount | cash}} to multrib contract <a href="https://stake.getsession.org/stake/{{ event.main_arg }}">{{ event.main_arg | dot_truncate(size=5) }}</a>
+            {% if event.args.contributor != event.args.beneficiary %}
+            (beneficiary: <a href="{{ render_state.arbiscan_url }}/address/{{ event.args.beneficiary }}">{{ event.args.beneficiary | dot_truncate(size=5) }}</a>)
+            {% endif %}
+        {% else %}
+            <div class="tooltip">
+                <span class="icon">📨{%if text%} Multicontributor Node Contribution{%endif%}</span>
+                <span class="tooltip-text">Multicontributor Node Contribution</span>
+            </div>
+        {% endif %}
+    {% elif event.name == 'Finalized' -%}
+        {%if action -%}
+            Finalized multicontrib contract <a href="https://stake.getsession.org/stake/{{ event.main_arg }}">{{ event.main_arg | dot_truncate(size=5) }}</a>
+        {% else %}
+            <div class="tooltip">
+                <span class="icon">🔜{%if text%} Multicontributor Node Finalized{%endif%}</span>
+                <span class="tooltip-text">Multicontributor Node Finalized</span>
+            </div>
+        {% endif %}
+    {% elif event.name == 'Filled' -%}
+        {%if action -%}
+            Filled multicontrib contract <a href="https://stake.getsession.org/stake/{{ event.main_arg }}">{{ event.main_arg | dot_truncate(size=5) }}</a>
+        {% else %}
+            <div class="tooltip">
+                <span class="icon">📀{%if text%} Multicontributor Node Filled{%endif%}</span>
+                <span class="tooltip-text">Multicontributor Node Filled</span>
+            </div>
+        {% endif %}
+    {% elif event.name == 'Reset' -%}
+        {%if action -%}
+            Reset multicontrib contract <a href="https://stake.getsession.org/stake/{{ event.main_arg }}">{{ event.main_arg | dot_truncate(size=5) }}</a>
+        {% else %}
+            <div class="tooltip">
+                <span class="icon">♻️{%if text%} Reset Multicontributor Settings{%endif%}</span>
+                <span class="tooltip-text">Reset Multicontributor Settings</span>
+            </div>
+        {% endif %}
+    {% else -%}
+        {%if action -%}
+        {% else %}
+            <div class="tooltip">
+                <span class="icon">❓{%if text%}{{ event.name }}{%endif%}</span>
+                <span class="tooltip-text">{{ event.name }}</span>
+            </div>
+        {% endif %}
+    {% endif -%}
 {% endmacro -%}

@@ -2,59 +2,61 @@
     {% if tx.version >= 4 -%}
         {% if tx.type == 1 and 'sn_state_change' in tx.extra -%}
             {% if tx.extra.sn_state_change.type == 'decom' -%}
-                <span class="icon" title="Session Node decommission">👎{%if text%} decommission{%endif%}</span>
+                <span class="icon" title="Session Node decommission">👎{%if text%} Decommission{%endif%}</span>
             {% elif tx.extra.sn_state_change.type == 'recom' -%}
-                <span class="icon" title="Session Node recommission">👍{%if text%} recommission{%endif%}</span>
+                <span class="icon" title="Session Node recommission">👍{%if text%} Recommission{%endif%}</span>
             {% elif tx.extra.sn_state_change.type == 'dereg' -%}
-                <span class="icon" title="Session Node deregistration">🚫{%if text%} deregistration{%endif%}</span>
+                <span class="icon" title="Session Node deregistration">🚫{%if text%} Deregistration{%endif%}</span>
             {% elif tx.extra.sn_state_change.type == 'ip' -%}
-                <span class="icon" title="Session Node IP change penalty">📋{%if text%} ip change{%endif%}</span>
+                <span class="icon" title="Session Node IP change penalty">📋{%if text%} IP Change{%endif%}</span>
             {% else -%}
-                <span class="icon" title="Unknown state change transaction">❓{%if text%} unknown state change{%endif%}</span><!-- Either a bug or a malformed transaction -->
+                <span class="icon" title="Unknown state change transaction">❓{%if text%} Unknown State Change{%endif%}</span><!-- Either a bug or a malformed transaction -->
             {% endif -%}
         {% elif tx.type == 2 -%}
-            <span class="icon" title="Session Node stake unlock — {{tx.extra.sn_pubkey}}">🔓{%if text%} unlock{%endif%}</span>
+            <span class="icon" title="Service Node stake unlock — {{tx.extra.sn_pubkey}}">🔓{%if text%} Unlock{%endif%}</span>
         {% elif tx.type == 4 and 'sns' in tx.extra -%}
             {% if 'buy' in tx.extra.ons -%}
-                <span class="icon" title="Session Name Service Buying">🎫{%if text%} LNS purchase{%endif%}</span>
+                <span class="icon" title="Session Name Service Buying">🎫{%if text%} LNS Purchase{%endif%}</span>
             {% elif 'update' in tx.extra.ons -%}
-                <span class="icon" title="Session Name Service Updating">💾{%if text%} LNS update{%endif%}</span>
+                <span class="icon" title="Session Name Service Updating">💾{%if text%} LNS Update{%endif%}</span>
             {% endif -%}
         {% elif 'sn_registration' in tx.extra -%}
-            <span class="icon" title="Session Node registration
+            <span class="icon" title="Service Node registration
                          {%-if tx.extra.sn_registration.fee == 1000000%} (solo)
                          {%-else%} ({{tx.extra.sn_registration.fee / 10000}}% fee)
                          {%-endif%}
-{{tx.extra.sn_pubkey}}
-{%-for c in tx.extra.sn_registration.contributors%}
-{{c.wallet | truncate(15)}} ({{c.portion / 10000}}% stake)
-{%-endfor%}">🏁{%if text%} registration{%endif%}</span>
+                         {{tx.extra.sn_pubkey}}
+                         {%-for c in tx.extra.sn_registration.contributors%}
+                         {{c.wallet | truncate(15)}} ({{c.portion / 10000}}% stake)
+                         {%-endfor%}">🏁{%if text%} Registration{%endif%}</span>
         {% elif 'type' in tx.extra %}
             {% if tx.extra.type == 'ethereum_service_node_deregister' %}
-                <span class="icon" title="Session Node deregistration">🚫{%if text%} deregistration{%endif%}</span>
+                <span class="icon" title="Session Node deregistration">🚫{%if text%} Deregistration{%endif%}</span>
             {% elif tx.extra.type == 'ethereum_service_node_exit' %}
-                <span class="icon" title="Session Node stake exit">🔓{%if text%} stake exit{%endif%}</span>
-            {% elif tx.extra.type == 'ethereum_service_node_leave_request' %}
-                <span class="icon" title="Session Node stake exit request">🔑{%if text%} stake exit request{%endif%}</span>
-            {% elif tx.extra.type == 'ethereum_new_service_node' %}
+                <span class="icon" title="Session Node stake exit">🔓{%if text%} Exit{%endif%}</span>
+            {% elif tx.extra.type == 'ethereum_service_node_exit_request' %}
+                <span class="icon" title="Session Node stake exit request">🔑{%if text%} Exit Request{%endif%}</span>
+            {% elif tx.extra.type == 'ethereum_new_service_node' or tx.extra.type == 'ethereum_new_service_node_v2' %}
                 <span class="icon" title="Session Node registration
-                             {%-if tx.extra.contributors|length == 1%} (solo)
-                             {%-else%} ({{tx.extra.fee / 10000}}% fee)
-                             {%-endif%}
-                             {{tx.extra.service_node_pubkey}}
-                             {%-for c in tx.extra.contributors%}
-                             {{c.address | truncate(15)}} ({{(c.amount / 1000000000) | chop0 | cash }} stake)
-                             {%-endfor%}">🏁{%if text%} registration{%endif%}</span>
+{%-if tx.extra.contributors|length == 1%} (solo)
+{%-else%} ({{tx.extra.fee / 10000}}% fee)
+{%-endif%}
+{{tx.extra.service_node_pubkey}}
+{%-for c in tx.extra.contributors%}
+{{c.address | truncate(15)}} ({{(c.amount) | chop0 | cash }} stake)
+{%-endfor%}">🏁{%if text%} registration{%endif%}</span>
+            {% elif tx.extra.type == 'ethereum_service_node_purge' %}
+                <span class="icon" title="Session Node purge">🔨{%if text%} Purge{%endif%}</span>
             {% endif %}
         {%- elif 'sn_contributor' in tx.extra -%}
             <span class="icon" title="Session Node contribution – {{tx.extra.sn_pubkey}} / {{tx.extra.sn_contributor}}">⚑
             {%-if text%} contribution{%endif%}</span>
         {%- elif tx.coinbase%}
-            <span class="icon" title="Block reward">🎁{%if text%} block reward{%endif%}</span>
+            <span class="icon" title="Block reward">🎁{%if text%} Block Reward{%endif%}</span>
         {%- elif text -%}
             transfer
         {%- endif -%}
     {%- elif standard -%}
-        {%if tx.coinbase%}block reward{%else%}transfer{%endif%}
+        {%if tx.coinbase%}Block reward{%else%}Transfer{%endif%}
     {%- endif -%}
 {% endmacro -%}

@@ -108,6 +108,7 @@
             <tr>
                 <td>L2 Height</td>
                 <td>Type</td>
+                <td>Action</td>
                 <td>Transaction Hash</td>
                 <td>Contract</td>
             </tr>
@@ -117,7 +118,8 @@
             {% for e in arbitrum_events %}
                 <tr class="block">
                     <td><a href="{{ render_state.arbiscan_url }}/block/{{ e.block }}">{{ e.block | thousands_comma }}</a></td>
-                    <td aria-label="{{ e.name }}">{{event_symbol.display_event(e)}}</td>
+                    <td aria-label="{{ e.name }}">{{event_symbol.display_event(e, render_state)}}</td>
+                    <td>{{event_symbol.display_event(e, render_state, action=true)}}</td>
                     <td><a href="{{ render_state.arbiscan_url }}/tx/0x{{ e.tx }}">{{e.tx}}</a></td>
                     <td>
                         {% if e.name == 'NewServiceNodeV2' or e.name == 'ServiceNodeExitRequest' or e.name == 'ServiceNodeExit' or e.name == 'ServiceNodeLiquidated' or e.name == 'RewardsClaimed' -%}
@@ -142,6 +144,7 @@
             <span>👍 Recommission</span>
             <span>👎 Decommission</span>
             <span>🚫 Deregistration</span>
+            <span>🔨 Purge </span>
             <span>🔓 Stake unlock</span>
             <span>🎁 Block Reward</span>
             <span>📋 IP Change Penalty</span>
@@ -184,7 +187,6 @@
                 <td>Type</td>
                 <td>Transaction Hash</td>
                 <td>Fee</td>
-{#                <td title="Batched reward payments">Rewards</td>#}
                 <td>In/Out</td>
                 <td>TX Size</td>
             </tr>
@@ -203,7 +205,6 @@
                   <td>{{symbol.display(b.txs[0])}}</td>
                   <td><a href="/tx/{{b.txs[0].tx_hash}}">{{b.txs[0].tx_hash}}</a></td>
                   <td>{{fee.display(b.txs[0])}}</td>
-{#                  <td>{{b.coinbase_payouts | cash(tag=False, fixed=True, decimals=2)}}</td>#}
                   <td>0/{{b.txs[0].vout | length}}</td>
                   <td>{{b.txs[0].size | si}}</td>
                 </tr>
@@ -216,7 +217,6 @@
                   <td></td>
                   <td></td>
                   <td></td>
-{#                  <td></td>#}
                   <td></td>
                   <td></td>
                 </tr>
@@ -229,7 +229,6 @@
                   <td>{{symbol.display(tx)}}</td>
                   <td><a href="/tx/{{tx.tx_hash}}">{{tx.tx_hash}}</a></td>
                   <td>{{fee.display(tx)}}</td>
-{#                  <td></td>#}
                   <td>{{tx.vin | length}}/{{tx.vout | length}}</td>
                   <td>{{tx.size | si}}</td>
                 </tr>

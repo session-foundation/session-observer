@@ -193,12 +193,12 @@ def format_oxen(atomic, tag_name='SESH', tag=True, fixed=False, decimals=9, zero
     if atomic == 0 and zero:
         disp = zero
     elif formatted:
-        disp = "{{:,.{}f}}".format(decimals).format(atomic * 1e-9)
+        disp = "{{:,.{}f}}".format(decimals).format(int(atomic) * 1e-9)
         if not fixed and decimals > 0:
             disp = disp.rstrip('0').rstrip('.')
 
     else:
-        disp = "{{:.{}f}}".format(decimals).format(atomic * 1e-9)
+        disp = "{{:.{}f}}".format(decimals).format(int(atomic) * 1e-9)
         if not fixed and decimals > 0:
             disp = disp.rstrip('0').rstrip('.')
 
@@ -209,6 +209,18 @@ def format_oxen(atomic, tag_name='SESH', tag=True, fixed=False, decimals=9, zero
 @app.template_filter('thousands_comma')
 def thousands_comma(str):
     return "{:,}".format(str)
+
+@app.template_filter('dot_truncate')
+def dot_truncate(string: str, size: int = 3):
+    result: str = string
+    if len(string) > size:
+        result = string[:size + 1] + ".."
+    return result
+
+@app.template_filter('bigint_to_hex')
+def bigint_to_hex(num: int):
+    result: str = hex(num)[2:]
+    return result
 
 @app.template_filter('percent')
 def percent(num, total, decimals=2):
