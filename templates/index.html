@@ -92,7 +92,6 @@
             {% else %}
                (Events {{per_event_page * event_page}}–{{(per_event_page * event_page)+ (arbitrum_events|length)}})
             {% endif %}
-            {{ components.tooltip("Arbitrum events are currently sourced from the Session Testnet.") }}
         </h2>
         <h4 class="general_info info_list nowrap-spans Subtitle">
             <span><label>Total Events:</label> {{ arbitrum_events_pagination.total | thousands_comma }}</span>
