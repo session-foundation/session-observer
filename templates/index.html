@@ -5,7 +5,7 @@
 
         <div class="info_list nowrap-spans">
             <span><label>Server Time:</label> {{ server.datetime | format_datetime }}</span>
-            <span><a href="/txpool">Session Appchain Transaction Pool</a></span>
+            <span><a href="/txpool">Appchain Transaction Pool</a></span>
             {% if config.pusher %}
                 <span><a href="/rawtx">Transaction pusher </a></span>
             {% endif %}
@@ -74,14 +74,23 @@
 
         <div class="TitleDivider"></div>
         <h4 class="tx-type-legend info_list nowrap-spans" style="margin-top: 0">
-            <label>Session Arbitrum TX Type Legend:</label>
-            <span>🏁 Session Node Registration</span>
-            <span>🚫 Deregistration</span>
-            <span>🔑 Exit Request</span>
-            <span>🔓 Exit</span>
-            <span>🧹 Liquidation</span>
+            <label>Arbitrum Transaction Types:</label>
+            <span>🏁 Node Registration</span>
+            <span>🚫 Node Deregistration</span>
+            <span>🔑 Node Exit Request</span>
+            <span>🔓 Node Exit</span>
+            <span>🧹 Node Liquidation</span>
             <span>🎁 Claim Rewards</span>
-            <span>📜 Multicontributor Contract Deploy</span>
+            <span>📜 Deploy Multicontrib. Contract</span>
+            <span>📥 Set Multicontrib. Reserved Slots</span>
+            <span>🧮 Set Multicontrib. Fee</span>
+            <span>📖 Multicontrib. Open For Contrib.</span>
+            <span>🪧 Set Multcontrib. Keys</span>
+            <span>🖋️ Set Multicontrib. Finalize Flag</span>
+            <span>📨 Multicontrib. Contrib.</span>
+            <span>🔜 Multicontrib. Finalized</span>
+            <span>📀 Multicontrib. Filled</span>
+            <span>♻️  Reset Multicontrib. </span>
         </h4>
     </div>
 
@@ -138,8 +147,8 @@
     <div class="Wrapper" id="appchain-tx">
         <div class="TitleDivider"></div>
         <h4 class="tx-type-legend info_list nowrap-spans" style="margin-top: 0">
-            <label>Session Appchain TX Type Legend:</label>
-            <span>🏁 Session Node Registration</span>
+            <label>Appchain Transaction Types:</label>
+            <span>🏁 Node Registration</span>
             <span>👍 Recommission</span>
             <span>👎 Decommission</span>
             <span>🚫 Deregistration</span>
@@ -147,15 +156,15 @@
             <span>🔓 Stake unlock</span>
             <span>🎁 Block Reward</span>
             <span>📋 IP Change Penalty</span>
-            <span>🎫 Session Name Service Purchase</span>
-            <span>💾 SNS Update</span>
+            <span>🎫 Name Service Purchase</span>
+            <span>💾 Name Service Update</span>
         </h4>
     </div>
 
     {% include 'include/mempool.html' %}
 
     <div class="Wrapper">
-        <h2>Session Appchain Transactions in
+        <h2>Appchain Transactions in
             {% if page == 0 %}
                 the Last {{blocks|length}} Blocks
             {% else %}
