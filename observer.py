@@ -1268,11 +1268,12 @@ def get_sesh_circulating_supply_atoms() -> float:
         # Subtract the tokens locked in the reward pool
         contracts                  = get_contract_sesh_balances() # Retrieve from cache
         session_cache.circ_supply -= contracts.reward_pool_sesh_balance
-        session_cache.circ_supply -= contracts.sn_rewards_sesh_balance
+        # session_cache.circ_supply -= contracts.sn_rewards_sesh_balance
 
         # Subtract the tokens locked up in investors/contracts
         if get_network_type() == NetworkType.Mainnet:
-            SEC_PER_YEAR: float                            = 60 * 60 * 24 * 365
+            SEC_PER_DAY: float                             = 60 * 60 * 24
+            SEC_PER_YEAR: float                            = SEC_PER_DAY * 365
             tge_ts                                         = 1747749600                  # Estimated to 21 May 2025 00:00
             lockup_a_staked_end_ts                         = tge_ts + (2 * SEC_PER_YEAR) # 2 year lockup
 
@@ -1282,29 +1283,45 @@ def get_sesh_circulating_supply_atoms() -> float:
             lockup_d_long_term_commit_vesting_ts           = tge_ts + (1 * SEC_PER_YEAR) # Vested after 1 year for 2 years
             lockup_d_long_term_commit_end_ts               = tge_ts + (3 * SEC_PER_YEAR)
 
+            lockup_f_short_term_staking_enabled_end_ts     = tge_ts + (90 * SEC_PER_DAY) # Unlocked after 90 days
+
+            # NOTE: Lockup C is not specified here because we are calculating circulating supply by
+            # subtracting from the total supply of 240 million tokens, so we only care about listing
+            # the locked tokens and subtracting them from the initial supply to reach the circulating supply.
+            #
+            # Additionally, for the staking reward pool in lockup 'E', we instead of calculating
+            # the linear emission rate we subtract the real-time balance of the reward pool (this
+            # allows the circulating supply to account for when we top up the reward pool with more
+            # tokens).
             project_treasury_session_nodes_lockup_a        = 15_000_000 * (10**SESH_DECIMALS)
             project_treasury_session_contributors_lockup_d = 11_000_000 * (10**SESH_DECIMALS)
             project_treasury_advisors_lockup_b             = 1_000_000  * (10**SESH_DECIMALS)
-
             project_treasury_operational_lockup_d          = 27_000_000 * (10**SESH_DECIMALS)
-            ecosystem_and_community_fund_lockup_d          = 14_000_000 * (10**SESH_DECIMALS)
+
+            ecosystem_and_community_fund_lockup_b          = 30_000_000 * (10**SESH_DECIMALS)
+
+            strategic_token_sale_lockup_a                  = 4_489_700  * (10**SESH_DECIMALS)
+            strategic_token_sale_lockup_b                  = 8_332_750  * (10**SESH_DECIMALS)
+
+            testnet_incentive_program_lockup_f             = 1_000_000  * (10**SESH_DECIMALS)
 
             if now < lockup_a_staked_end_ts: # Lockup A
-                session_cache.circ_supply -= project_treasury_session_nodes_lockup_a
+                total_locked               = strategic_token_sale_lockup_a + project_treasury_session_nodes_lockup_a
+                session_cache.circ_supply -= total_locked
 
             if now < lockup_b_linear_end_ts: # Lockup B
-                total_locked   = project_treasury_advisors_lockup_b;
+                total_locked   = project_treasury_advisors_lockup_b + ecosystem_and_community_fund_lockup_b + strategic_token_sale_lockup_b;
                 total_unlocked = 0
                 if now > lockup_b_linear_vesting_ts:
                     vest_duration            = lockup_b_linear_end_ts - lockup_b_linear_vesting_ts
                     sesh_unlocked_per_second = total_locked / vest_duration
                     total_unlocked           = (lockup_b_linear_end_ts - now) * sesh_unlocked_per_second
 
-                curr_locked                    = total_locked - total_unlocked
+                curr_locked                = total_locked - total_unlocked
                 session_cache.circ_supply -= curr_locked
 
             if now < lockup_d_long_term_commit_end_ts: # Lockup D
-                total_locked   = project_treasury_operational_lockup_d + project_treasury_session_contributors_lockup_d + ecosystem_and_community_fund_lockup_d;
+                total_locked   = project_treasury_operational_lockup_d + project_treasury_session_contributors_lockup_d
                 total_unlocked = 0
 
                 if now > lockup_d_long_term_commit_vesting_ts:
@@ -1312,9 +1329,11 @@ def get_sesh_circulating_supply_atoms() -> float:
                     sesh_unlocked_per_second = total_locked / vest_duration
                     total_unlocked           = (lockup_d_long_term_commit_end_ts - now) * sesh_unlocked_per_second
 
-                curr_locked                    = total_locked - total_unlocked
+                curr_locked                = total_locked - total_unlocked
                 session_cache.circ_supply -= curr_locked
 
+            if now < lockup_f_short_term_staking_enabled_end_ts: # Lockup F
+                session_cache.circ_supply -= testnet_incentive_program_lockup_f
 
             # Before TGE (and consequently before the contract is seeded w/ the converted OXEN
             # stakes) we subtract the locked tokens via the SNL from the circulating supply.
