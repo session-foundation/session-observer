@@ -12,7 +12,6 @@ import oxenmq
 # LMQ RPC endpoint of oxend; can be a unix socket 'ipc:///path/to/oxend.sock' (preferred) or a tcp
 # socket 'tcp://127.0.0.1:5678'.  Typically you want this running with admin permission.
 # Leave this as None here, and set it for each observer in the mainnet.py/testnet.py/etc. script.
-sessiond_rpc             = None
 oxend_rpc                = None
 
 # Default blocks per page for the index.
@@ -39,7 +38,7 @@ lokinet_testnet_url      = 'http://testnet.loki'
 lokinet_devnet_url       = 'http://devnet.kcpyawm9se7trdbzncimdi5t7st4p5mh9i1mg7gkpuubi4k4ku1y.loki'
 
 # Staking Backend API URL:
-staking_backend_api_url  = ''
+staking_portal_url       = 'https://stake.getsession.org'
 arbitrum_rpc_url         = 'https://arb1.arbitrum.io/rpc'
 arbitrum_sepolia_rpc_url = 'https://sepolia-rollup.arbitrum.io/rpc'
 

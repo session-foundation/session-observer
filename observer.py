@@ -27,7 +27,7 @@ import secrets
 from Cryptodome.Hash import keccak
 import config
 import local_config
-from lmq import FutureJSON, omq_connection, smq_connection
+from lmq import FutureJSON, omq_connection
 
 class NetworkType(enum.Enum):
     Nil      = 0
@@ -45,6 +45,8 @@ class ObserverSessionCache:
     reward_pool_sesh_balance_last_query_ts: float       = 0
     sn_rewards_sesh_balance:                float       = 0
     sn_rewards_sesh_balance_last_query_ts:  float       = 0
+    num_sn_awaiting_contrib:                int         = 0
+    num_sn_awaiting_contrib_last_query_ts:  float       = 0
 
     def to_dict(self):
         result: dict = {
@@ -55,6 +57,8 @@ class ObserverSessionCache:
             'reward_pool_sesh_balance_last_query_ts': self.reward_pool_sesh_balance_last_query_ts,
             'sn_rewards_sesh_balance':                self.sn_rewards_sesh_balance,
             'sn_rewards_sesh_balance_last_query_ts':  self.sn_rewards_sesh_balance_last_query_ts,
+            'num_sn_awaiting_contrib':                self.num_sn_awaiting_contrib,
+            'num_sn_awaiting_contrib_last_query_ts':  self.num_sn_awaiting_contrib_last_query_ts,
         }
         return result
 
@@ -68,6 +72,8 @@ class ObserverSessionCache:
         result.reward_pool_sesh_balance_last_query_ts = data['reward_pool_sesh_balance_last_query_ts']
         result.sn_rewards_sesh_balance                = data['sn_rewards_sesh_balance']
         result.sn_rewards_sesh_balance_last_query_ts  = data['sn_rewards_sesh_balance_last_query_ts']
+        result.num_sn_awaiting_contrib                = data['num_sn_awaiting_contrib']
+        result.num_sn_awaiting_contrib_last_query_ts  = data['num_sn_awaiting_contrib_last_query_ts']
         return result
 
 class ContractSESHBalances:
@@ -76,13 +82,15 @@ class ContractSESHBalances:
 
 class IndexHTMLRenderState:
     # Mega struct containing the data used to render HTML via Jinja
-    balances:               ContractSESHBalances = ContractSESHBalances()
-    sesh_circ_supply_atoms: float                = 0
-    sn_rewards_addr:        str                  = ""
-    sn_contrib_factory:     str                  = ""
-    rewards_pool_addr:      str                  = ""
-    sesh_token_addr:        str                  = ""
-    arbiscan_url:           str                  = ""
+    balances:                ContractSESHBalances = ContractSESHBalances()
+    sesh_circ_supply_atoms:  float                = 0
+    num_sn_awaiting_contrib: int                  = 0
+    sn_rewards_addr:         str                  = ""
+    sn_contrib_factory:      str                  = ""
+    rewards_pool_addr:       str                  = ""
+    sesh_token_addr:         str                  = ""
+    staking_portal_url:      str                  = ""
+    arbiscan_url:            str                  = ""
 
 SESH_DECIMALS:              int = 9
 OBSERVER_SESSION_CACHE_KEY: str = 'observer_session_cache'
@@ -275,7 +283,7 @@ def get_sns_future(omq, oxend):
 
 def get_sns(sns_future, info_future):
     info = info_future.get()
-    awaiting_sns, active_sns, inactive_sns = [], [], []
+    active_sns, inactive_sns = [], []
     sn_states = sns_future.get()
     sn_states = sn_states['service_node_states'] if 'service_node_states' in sn_states else []
     for sn in sn_states:
@@ -289,9 +297,7 @@ def get_sns(sns_future, info_future):
             sn['decomm_blocks_remaining'] = max(sn['earned_downtime_blocks'], 0)
             sn['decomm_blocks'] = info['height'] - sn['state_height']
             inactive_sns.append(sn)
-        else:
-            awaiting_sns.append(sn)
-    return awaiting_sns, active_sns, inactive_sns
+    return active_sns, inactive_sns
 
 
 def get_quorums_future(omq, oxend, height):
@@ -359,8 +365,8 @@ def parse_mempool(mempool_future):
 def get_arbitrum_events_paginated(count_limit=500, skip=0):
     events = []
     pagination = { 'total': 0 }
-    if len(config.staking_backend_api_url) > 0:
-        res = requests.get(config.staking_backend_api_url + "/events/" + str(count_limit) + "/" + str(skip)).json()
+    if len(config.staking_portal_url) > 0:
+        res = requests.get(config.staking_portal_url + "/api/ssb/events/" + str(count_limit) + "/" + str(skip)).json()
         events = res.get("events")
         if events is None:
             return events, pagination
@@ -369,8 +375,8 @@ def get_arbitrum_events_paginated(count_limit=500, skip=0):
 
 def get_arbitrum_info():
     result = None
-    if len(config.staking_backend_api_url) > 0:
-        res = requests.get(config.staking_backend_api_url + "/arbitrum-info").json()
+    if len(config.staking_portal_url) > 0:
+        res = requests.get(config.staking_portal_url + "/api/ssb/arbitrum-info").json()
         result = res.get("info")
     return result
 
@@ -396,10 +402,8 @@ def template_globals():
 @app.route('/')
 def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None, event_page=0, per_event_page=None):
     omq, oxend = omq_connection()
-    smq, sessiond = smq_connection()
 
     inforeq     = FutureJSON(omq, oxend, 'rpc.get_info', 1)
-    inforeq_sd  = FutureJSON(smq, sessiond, 'rpc.get_last_block_header', args={'fill_pow_hash': False, 'get_tx_hashes': False },cache_seconds=1)
     stake       = FutureJSON(omq, oxend, 'rpc.get_staking_requirement', 10)
     base_fee    = FutureJSON(omq, oxend, 'rpc.get_fee_estimate', 10)
     hfinfo      = FutureJSON(omq, oxend, 'rpc.hard_fork_info', 10)
@@ -434,8 +438,6 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None,
     info['testnet']  = info['nettype'] == 'testnet'
     info['stagenet'] = info['nettype'] == 'stagenet'
     info['devnet']   = info['nettype'] == 'devnet'
-
-    info_sd          = inforeq_sd.get().get('block_header')
 
     # Permalinked block range:
     if first is not None and last is not None and 0 <= first <= last and last <= first + 99:
@@ -489,26 +491,30 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None,
                 blocks[i]['txs'].append(tx)
 
     # Clean up the SN data a bit to make things easier for the templates
-    awaiting_sns, active_sns, inactive_sns = get_sns(sns, inforeq)
+    active_sns, inactive_sns = get_sns(sns, inforeq)
 
     accrued = accrued.get()
     accrued_total = (
             sum(amt for _, amt in accrued['balances'].items()) if 'balances' in accrued else
             sum(accrued['amounts']))
 
-    network_type: NetworkType           = get_network_type()
-    render_state: IndexHTMLRenderState  = IndexHTMLRenderState()
-    render_state.balances               = get_contract_sesh_balances()
-    render_state.sesh_circ_supply_atoms = get_sesh_circulating_supply_atoms()
-    render_state.sn_rewards_addr        = get_service_node_rewards_addr(network_type)
-    render_state.sn_contrib_factory     = get_service_node_contrib_factory_addr(network_type)
-    render_state.rewards_pool_addr      = get_reward_pool_addr(network_type)
-    render_state.sesh_token_addr        = get_token_addr(network_type)
-    render_state.arbiscan_url           = "https://sepolia.arbiscan.io" if network_type == NetworkType.Stagenet else "https://arbiscan.io"
+    network_type: NetworkType            = get_network_type()
+    render_state: IndexHTMLRenderState   = IndexHTMLRenderState()
+    render_state.balances                = get_contract_sesh_balances()
+    render_state.sesh_circ_supply_atoms  = get_sesh_circulating_supply_atoms()
+
+    # TODO: Since we query the staking backend for open nodes, it's possible to show it on the
+    # explorer. For now, we just redirect them to the staking portal
+    render_state.num_sn_awaiting_contrib = get_num_sn_awaiting_contrib()
+    render_state.sn_rewards_addr         = get_service_node_rewards_addr(network_type)
+    render_state.sn_contrib_factory      = get_service_node_contrib_factory_addr(network_type)
+    render_state.rewards_pool_addr       = get_reward_pool_addr(network_type)
+    render_state.sesh_token_addr         = get_token_addr(network_type)
+    render_state.staking_portal_url      = config.staking_portal_url
+    render_state.arbiscan_url            = "https://sepolia.arbiscan.io" if network_type == NetworkType.Stagenet else "https://arbiscan.io"
 
     return flask.render_template('index.html',
             info=info,
-            info_sd=info_sd,
             render_state=render_state,
             stake=stake.get(),
             fees=base_fee.get(),
@@ -518,7 +524,6 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None,
             active_sns=active_sns,
             active_swarms=len(set(x['swarm_id'] for x in active_sns)),
             inactive_sns=inactive_sns,
-            awaiting_sns=awaiting_sns,
             blocks=blocks,
             arbitrum_events=arbitrum_events,
             arbitrum_events_pagination=arbitrum_events_pagination,
@@ -1255,6 +1260,34 @@ def get_contract_sesh_balances() -> ContractSESHBalances:
     result.reward_pool_sesh_balance = cache.reward_pool_sesh_balance
     result.sn_rewards_sesh_balance  = cache.sn_rewards_sesh_balance
     return result
+
+def get_num_sn_awaiting_contrib() -> int:
+    cache:      ObserverSessionCache = get_session_cache()
+    now:        float                = time.time()
+    secs_since: float                = now - cache.num_sn_awaiting_contrib_last_query_ts
+    if secs_since > 10:
+        url = config.staking_portal_url + "/api/ssb/contract/contribution"
+        try:
+            response = requests.get(url)
+            response.raise_for_status()  # Raise an error for bad HTTP status codes
+            json_result = response.json()
+
+            if 'contracts' in json_result:
+                cache.num_sn_awaiting_contrib = 0
+                contracts_array = json_result['contracts']
+
+                OPEN_FOR_CONTRIBUTION: int = 1 # This is the IServiceNodeContribution.Status enum from the IServiceNodeRewards.sol
+                for item in contracts_array:
+                    if 'status' in item and item['status'] == OPEN_FOR_CONTRIBUTION:
+                        cache.num_sn_awaiting_contrib += 1
+
+        except Exception as e:
+            print(f'Error querying number of SNs awaiting contribution from {url}: {e}')
+
+        cache.num_sn_awaiting_contrib_last_query_ts = now
+        store_session_cache(cache)
+
+    return cache.num_sn_awaiting_contrib
 
 def get_sesh_circulating_supply_atoms() -> float:
     session_cache: ObserverSessionCache = get_session_cache()

@@ -106,7 +106,7 @@
         {% endif %}
     {% elif event.name == 'NewContribution' -%}
         {%if action -%}
-            <a href="{{ render_state.arbiscan_url }}/address/{{ event.args.contributor }}">{{ event.args.contributor | dot_truncate(size=5) }}</a> contributed {{ event.args.amount | cash}} to multrib contract <a href="https://stake.getsession.org/stake/{{ event.main_arg }}">{{ event.main_arg | dot_truncate(size=5) }}</a>
+            <a href="{{ render_state.arbiscan_url }}/address/{{ event.args.contributor }}">{{ event.args.contributor | dot_truncate(size=5) }}</a> contributed {{ event.args.amount | cash}} to multicontrib contract <a href="https://stake.getsession.org/stake/{{ event.main_arg }}">{{ event.main_arg | dot_truncate(size=5) }}</a>
             {% if event.args.contributor != event.args.beneficiary %}
             (beneficiary: <a href="{{ render_state.arbiscan_url }}/address/{{ event.args.beneficiary }}">{{ event.args.beneficiary | dot_truncate(size=5) }}</a>)
             {% endif %}

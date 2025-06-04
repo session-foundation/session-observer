@@ -1,17 +1,19 @@
 <div class="Wrapper">
     <div class="TitleDivider"></div>
     <h1 style="margin-bottom: 0px">Session Nodes</h1>
-    <h3><span class="sn-count">{{awaiting_sns | count}}</span> session nodes awaiting contributions,
+    <h4 class="Subtitle">
+        <span class="sn-count">{{render_state.num_sn_awaiting_contrib}}</span>
+        {% if (render_state.staking_portal_url | length) == 0 %}
+        session nodes awaiting contributions,
+        {% else %}
+        <a href="{{ render_state.staking_portal_url }}/stake">session nodes awaiting contributions</a>,
+        {% endif %}
         <span class="sn-count">{{inactive_sns | count}}</span> decommissioned session nodes,
-        and <span class="sn-count">{{active_sns | count}}</span> active session nodes.</h3>
-
-    <h2 style="margin-bottom: 0px" id="service-nodes-awaiting">Session Nodes Awaiting Contributions <span class="sn-count">({{awaiting_sns | count}})</span></h2>
-    <div class="TitleDivider sn-awaiting"></div>
-    {%include 'include/sn_awaiting.html'%}
-
+        and <span class="sn-count">{{active_sns | count}}</span> active session nodes.
+    </h4>
 
     <h2 style="margin-bottom: 0px" id="service-nodes-inactive">Inactive/Decommissioned Session Nodes <span class="sn-count">({{inactive_sns | count}})</span></h2>
-    <h4 class="Subtitle">(These session nodes are currently decommissioned for failing network obligations, <span style="font-weight: bold; text-decoration: underline">are not earning rewards</span>, and face deregistration soon)</h4>
+    <h4 class="Subtitle">fhese session nodes are currently decommissioned for failing network obligations, <span style="font-weight: bold; text-decoration: underline">are not earning rewards</span>, and face deregistration soon</h4>
     <div class="TitleDivider sn-inactive"></div>
     {%include 'include/sn_inactive.html'%}
 
