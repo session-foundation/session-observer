@@ -57,8 +57,8 @@
 
         <h4 class="info_list nowrap-spans">
             <span>
-                <label><a href="{{ render_state.arbiscan_url }}/token/{{ render_state.sesh_token_addr }}">SESH Circulating Supply</a></label>
-                {{ render_state.sesh_circ_supply_atoms | cash(decimals=2, formatted=True)}}
+                <label>SESH Supply (<a href="https://docs.getsession.org/session-token-sesh/tokenomics/genesis-tokenomics">Circ.</a>/Max)</a></label>
+                {{ render_state.sesh_circ_supply_atoms | cash(decimals=2, formatted=True, tag='')}} / 240,000,000
             </span>
             <span>
                 <label><a href="{{ render_state.arbiscan_url }}/address/{{ render_state.rewards_pool_addr }}">Rewards Pool</a></label>
@@ -69,6 +69,9 @@
             </span>
             <span>
                 <label><a href="{{ render_state.arbiscan_url }}/address/{{ render_state.sn_contrib_factory }}">Session Multicontributor Factory</a></label>
+            </span>
+            <span>
+                <label>SESH Token <a href="{{ render_state.arbiscan_url }}/token/{{ render_state.sesh_token_addr }}">ARB</a> / <a href="https://etherscan.io/token/{{ render_state.sesh_token_addr }}">ETH</a></label>
             </span>
         </h4>
 
