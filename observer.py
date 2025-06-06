@@ -10,6 +10,7 @@ import string
 import requests
 import time
 import base64
+import decimal
 from base64 import b32encode, b16decode
 from werkzeug.routing import BaseConverter
 from pygments import highlight
@@ -39,7 +40,7 @@ class ObserverSessionCache:
     # This cache holds onto retrieved values and only periodically re-queries the values when a
     # certain time has elapsed since the last query.
     network_type:                           NetworkType = NetworkType.Nil
-    circ_supply:                            float       = 0
+    circ_supply:                            int         = 0
     circ_supply_last_query_ts:              float       = 0
     reward_pool_sesh_balance:               float       = 0
     reward_pool_sesh_balance_last_query_ts: float       = 0
@@ -77,13 +78,13 @@ class ObserverSessionCache:
         return result
 
 class ContractSESHBalances:
-    reward_pool_sesh_balance: float = 0
-    sn_rewards_sesh_balance:  float = 0
+    reward_pool_sesh_balance: int = 0
+    sn_rewards_sesh_balance:  int = 0
 
 class IndexHTMLRenderState:
     # Mega struct containing the data used to render HTML via Jinja
     balances:                ContractSESHBalances = ContractSESHBalances()
-    sesh_circ_supply_atoms:  float                = 0
+    sesh_circ_supply_atoms:  int                  = 0
     num_sn_awaiting_contrib: int                  = 0
     sn_rewards_addr:         str                  = ""
     sn_contrib_factory:      str                  = ""
@@ -1289,14 +1290,14 @@ def get_num_sn_awaiting_contrib() -> int:
 
     return cache.num_sn_awaiting_contrib
 
-def get_sesh_circulating_supply_atoms() -> float:
+def get_sesh_circulating_supply_atoms() -> int:
     session_cache: ObserverSessionCache = get_session_cache()
     now:           float                = time.time()
     secs_since                          = now - session_cache.circ_supply_last_query_ts
 
     if secs_since > 60: # Cache result for 60s
         session_cache.circ_supply_last_query_ts = now
-        session_cache.circ_supply               = 240_000_000 * (10**SESH_DECIMALS)
+        session_cache.circ_supply               = 240_000_000 * 10**SESH_DECIMALS
 
         # Subtract the tokens locked in the reward pool
         contracts                  = get_contract_sesh_balances() # Retrieve from cache
@@ -1326,43 +1327,43 @@ def get_sesh_circulating_supply_atoms() -> float:
             # the linear emission rate we subtract the real-time balance of the reward pool (this
             # allows the circulating supply to account for when we top up the reward pool with more
             # tokens).
-            project_treasury_session_nodes_lockup_a        = 15_000_000 * (10**SESH_DECIMALS)
-            project_treasury_session_contributors_lockup_d = 11_000_000 * (10**SESH_DECIMALS)
-            project_treasury_advisors_lockup_b             = 1_000_000  * (10**SESH_DECIMALS)
-            project_treasury_operational_lockup_d          = 27_000_000 * (10**SESH_DECIMALS)
+            project_treasury_session_nodes_lockup_a: int        = 15_000_000 * 10**SESH_DECIMALS
+            project_treasury_session_contributors_lockup_d: int = 11_000_000 * 10**SESH_DECIMALS
+            project_treasury_advisors_lockup_b: int             = 1_000_000  * 10**SESH_DECIMALS
+            project_treasury_operational_lockup_d: int          = 27_000_000 * 10**SESH_DECIMALS
 
-            ecosystem_and_community_fund_lockup_b          = 30_000_000 * (10**SESH_DECIMALS)
+            ecosystem_and_community_fund_lockup_b: int          = 30_000_000 * 10**SESH_DECIMALS
 
-            strategic_token_sale_lockup_a                  = 4_489_700  * (10**SESH_DECIMALS)
-            strategic_token_sale_lockup_b                  = 8_332_750  * (10**SESH_DECIMALS)
+            strategic_token_sale_lockup_a: int                  = 4_489_700  * 10**SESH_DECIMALS
+            strategic_token_sale_lockup_b: int                  = 8_332_750  * 10**SESH_DECIMALS
 
-            testnet_incentive_program_lockup_f             = 1_000_000  * (10**SESH_DECIMALS)
+            testnet_incentive_program_lockup_f: int             = 1_000_000  * 10**SESH_DECIMALS
 
             if now < lockup_a_staked_end_ts: # Lockup A
                 total_locked               = strategic_token_sale_lockup_a + project_treasury_session_nodes_lockup_a
                 session_cache.circ_supply -= total_locked
 
             if now < lockup_b_linear_end_ts: # Lockup B
-                total_locked   = project_treasury_advisors_lockup_b + ecosystem_and_community_fund_lockup_b + strategic_token_sale_lockup_b;
-                total_unlocked = 0
+                total_locked: int   = project_treasury_advisors_lockup_b + ecosystem_and_community_fund_lockup_b + strategic_token_sale_lockup_b;
+                total_unlocked: int = 0
                 if now > lockup_b_linear_vesting_ts:
-                    vest_duration            = lockup_b_linear_end_ts - lockup_b_linear_vesting_ts
-                    sesh_unlocked_per_second = total_locked / vest_duration
-                    total_unlocked           = (lockup_b_linear_end_ts - now) * sesh_unlocked_per_second
+                    vest_duration:            int = lockup_b_linear_end_ts - lockup_b_linear_vesting_ts
+                    sesh_unlocked_per_second: int = int(total_locked / vest_duration)
+                    total_unlocked:           int = int(lockup_b_linear_end_ts - now) * sesh_unlocked_per_second
 
-                curr_locked                = total_locked - total_unlocked
+                curr_locked: int           = total_locked - total_unlocked
                 session_cache.circ_supply -= curr_locked
 
             if now < lockup_d_long_term_commit_end_ts: # Lockup D
-                total_locked   = project_treasury_operational_lockup_d + project_treasury_session_contributors_lockup_d
-                total_unlocked = 0
+                total_locked:   int = project_treasury_operational_lockup_d + project_treasury_session_contributors_lockup_d
+                total_unlocked: int = 0
 
                 if now > lockup_d_long_term_commit_vesting_ts:
-                    vest_duration            = lockup_d_long_term_commit_end_ts - lockup_d_long_term_commit_vesting_ts
-                    sesh_unlocked_per_second = total_locked / vest_duration
-                    total_unlocked           = (lockup_d_long_term_commit_end_ts - now) * sesh_unlocked_per_second
+                    vest_duration:            int = lockup_d_long_term_commit_end_ts - lockup_d_long_term_commit_vesting_ts
+                    sesh_unlocked_per_second: int = int(total_locked / vest_duration)
+                    total_unlocked:           int = int(lockup_d_long_term_commit_end_ts - now) * sesh_unlocked_per_second
 
-                curr_locked                = total_locked - total_unlocked
+                curr_locked: int           = total_locked - total_unlocked
                 session_cache.circ_supply -= curr_locked
 
             if now < lockup_f_short_term_staking_enabled_end_ts: # Lockup F
@@ -1379,7 +1380,7 @@ def get_sesh_circulating_supply_atoms() -> float:
                 snl        = get_sns_future(omq, oxend).get()
                 if snl is not None:
                     snl_states = snl['service_node_states'] if 'service_node_states' in snl else []
-                    session_cache.circ_supply -= (25_000 * (10**SESH_DECIMALS)) * len(snl_states)
+                    session_cache.circ_supply -= (25_000 * 10**SESH_DECIMALS) * len(snl_states)
 
         store_session_cache(session_cache)
 
@@ -1388,8 +1389,9 @@ def get_sesh_circulating_supply_atoms() -> float:
 
 @app.route('/api/sesh_circulating_supply')
 def api_sesh_circulating_supply_atoms():
-    supply = get_sesh_circulating_supply_atoms()
-    result = flask.jsonify(int(supply / 10**SESH_DECIMALS))
+    supply          = get_sesh_circulating_supply_atoms()
+    supply_decimals = str(decimal.Decimal(supply) / 10**SESH_DECIMALS)
+    result          = flask.jsonify({'result': supply_decimals})
     return result
 
 # FIXME: need better error handling here
