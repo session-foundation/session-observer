@@ -588,13 +588,15 @@ def block_with_txs_req(omq, oxend, hash_or_height, **kwargs):
 
     return FutureJSON(omq, oxend, 'rpc.get_block', cache_key='single', args=args, **kwargs)
 
-def sns_info(omq, oxend, name, sns_type, **kwargs):
+def sns_info(omq, oxend, name, sns_type):
     if sns_type == 2:
         name=name+'.loki'
     name_hash = nacl.hash.blake2b(name.encode(), encoder = nacl.encoding.Base64Encoder)
 
-    return FutureJSON(omq, oxend, 'rpc.ons_names_to_owners', args={
-      "entries": [{'name_hash':name_hash.decode('ascii'),'types':[sns_type]}]})
+    return FutureJSON(omq,
+                      oxend,
+                      'rpc.ons_info',
+                      args={'name_hash':name_hash.decode('ascii'), 'type': sns_type})
 
 
 @app.route('/sns/<string:name>')
@@ -619,8 +621,11 @@ def show_sns(name, more_details=False):
 
     for sns_type in sns_types:
         sns_info_res = sns_info(omq, oxend, name, sns_types[sns_type]).get()
-
-        if 'entries' not in sns_info_res:
+        # Example:
+        # {'result': {'<name_hash>': [{'encrypted_value': '...', 'owner': '...', 'txid': '...', 'type': 0, 'update_height': ...}]}, 'status': 'OK'}
+        name_hash_key   = next(iter(sns_info_res['result']))
+        name_hash_value = sns_info_res['result'][name_hash_key]
+        if len(name_hash_value) == 0:
             # If returned with no data from the RPC
             if (sns_types[sns_type] == 2 and '-' in name and len(name) > 63) or (sns_types[sns_type] == 2 and '-' not in name and len(name) > 32):
                 sns_data[sns_type] = False
@@ -628,13 +633,14 @@ def show_sns(name, more_details=False):
                 sns_data[sns_type] = True
 
         else:
-            sns_info_res = sns_info_res['entries'][0]
-            sns_data[sns_type] = sns_info_res
+            sns_info_res                    = name_hash_value[0]
+            sns_data[sns_type]              = sns_info_res
+            sns_data[sns_type]['name_hash'] = name_hash_key
 
             if len(sns_info_res['encrypted_value']) not in [SESSION_ENCRYPTED_LENGTH, WALLET_ENCRYPTED_LENGTH, LOKINET_ENCRYPTED_LENGTH]:
                 # Encryption involves a much more expensive argon2-based calculation for HF15 registrations.
                 # Owners should be notified they should update to the new encryption format.
-                sns_data[sns_type] = sns_info(omq, oxend, name, sns_types[sns_type]).get()['entries'][0]
+                sns_data[sns_type] = sns_info_res
                 sns_data[sns_type]['mapping'] = 'Owner needs to update their ID for mapping info.'
 
             else:
