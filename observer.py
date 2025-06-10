@@ -81,7 +81,7 @@ class ContractSESHBalances:
     reward_pool_sesh_balance: int = 0
     sn_rewards_sesh_balance:  int = 0
 
-class IndexHTMLRenderState:
+class HTMLRenderState:
     # Mega struct containing the data used to render HTML via Jinja
     balances:                ContractSESHBalances = ContractSESHBalances()
     sesh_circ_supply_atoms:  int                  = 0
@@ -499,21 +499,7 @@ def main(refresh=None, page=0, per_page=None, first=None, last=None, style=None,
             sum(amt for _, amt in accrued['balances'].items()) if 'balances' in accrued else
             sum(accrued['amounts']))
 
-    network_type: NetworkType            = get_network_type()
-    render_state: IndexHTMLRenderState   = IndexHTMLRenderState()
-    render_state.balances                = get_contract_sesh_balances()
-    render_state.sesh_circ_supply_atoms  = get_sesh_circulating_supply_atoms()
-
-    # TODO: Since we query the staking backend for open nodes, it's possible to show it on the
-    # explorer. For now, we just redirect them to the staking portal
-    render_state.num_sn_awaiting_contrib = get_num_sn_awaiting_contrib()
-    render_state.sn_rewards_addr         = get_service_node_rewards_addr(network_type)
-    render_state.sn_contrib_factory      = get_service_node_contrib_factory_addr(network_type)
-    render_state.rewards_pool_addr       = get_reward_pool_addr(network_type)
-    render_state.sesh_token_addr         = get_token_addr(network_type)
-    render_state.staking_portal_url      = config.staking_portal_url
-    render_state.arbiscan_url            = "https://sepolia.arbiscan.io" if network_type == NetworkType.Stagenet else "https://arbiscan.io"
-
+    render_state: HTMLRenderState = get_render_state()
     return flask.render_template('index.html',
             info=info,
             render_state=render_state,
@@ -554,17 +540,17 @@ def mempool():
 
 @app.route('/service_nodes')
 def sns():
-    omq, oxend = omq_connection()
-    info = FutureJSON(omq, oxend, 'rpc.get_info', 1)
-    awaiting, active, inactive = get_sns(get_sns_future(omq, oxend), info)
+    omq, oxend                    = omq_connection()
+    info                          = FutureJSON(omq, oxend, 'rpc.get_info', 1)
+    active, inactive              = get_sns(get_sns_future(omq, oxend), info)
+    render_state: HTMLRenderState = get_render_state()
 
     return flask.render_template('service_nodes.html',
+        render_state=render_state,
         info=info.get(),
         active_sns=active,
         active_swarms=len(set(x['swarm_id'] for x in active)),
-        awaiting_sns=awaiting,
-        inactive_sns=inactive,
-        )
+        inactive_sns=inactive)
 
 def tx_req(omq, oxend, txids, cache_key='single', **kwargs):
     return FutureJSON(omq, oxend, 'rpc.get_transactions', cache_seconds=10, cache_key=cache_key,
@@ -1235,6 +1221,22 @@ def get_network_type() -> NetworkType:
             store_session_cache(cache)
 
     result = cache.network_type
+    return result
+
+def get_render_state() -> HTMLRenderState:
+    network_type: NetworkType      = get_network_type()
+    result:       HTMLRenderState  = HTMLRenderState()
+    result.balances                = get_contract_sesh_balances()
+    result.sesh_circ_supply_atoms  = get_sesh_circulating_supply_atoms()
+    # TODO: Since we query the staking backend for open nodes, it's possible to show it on the
+    # explorer. For now, we just redirect them to the staking portal
+    result.num_sn_awaiting_contrib = get_num_sn_awaiting_contrib()
+    result.sn_rewards_addr         = get_service_node_rewards_addr(network_type)
+    result.sn_contrib_factory      = get_service_node_contrib_factory_addr(network_type)
+    result.rewards_pool_addr       = get_reward_pool_addr(network_type)
+    result.sesh_token_addr         = get_token_addr(network_type)
+    result.staking_portal_url      = config.staking_portal_url
+    result.arbiscan_url            = "https://sepolia.arbiscan.io" if network_type == NetworkType.Stagenet else "https://arbiscan.io"
     return result
 
 def get_contract_sesh_balances() -> ContractSESHBalances:
