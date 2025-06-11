@@ -374,13 +374,6 @@ def get_arbitrum_events_paginated(count_limit=500, skip=0):
         pagination = res.get("pagination")
     return events, pagination
 
-def get_arbitrum_info():
-    result = None
-    if len(config.staking_portal_url) > 0:
-        res = requests.get(config.staking_portal_url + "/api/ssb/arbitrum-info").json()
-        result = res.get("info")
-    return result
-
 @app.context_processor
 def template_globals():
     now = datetime.now(timezone.utc)
