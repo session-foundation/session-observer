@@ -24,6 +24,25 @@
                     {% endif %}
                 </span>
             {% endif %}
+            {% if config.mainnet_url and not info.mainnet %}
+               <span><a href="{{config.mainnet_url}}">Go to mainnet explorer</a></span>
+            {% endif %}
+            {% if config.stagenet_url and not info.stagenet %}
+               <span><a href="{{config.stagenet_url}}">Go to stagenet explorer</a></span>
+            {% endif %}
+            {% if config.testnet_url and not info.testnet %}
+               <span><a href="{{config.testnet_url}}">Go to testnet explorer</a></span>
+            {% endif %}
+            {% if config.devnet_url and not info.devnet %}
+               <span><a href="{{config.devnet_url}}">Go to devnet explorer</a></span>
+            {% endif %}
+            {% if info.stagenet %}
+               <span>This is <span style="color:#af5bd2; font-weight: bold">STAGENET</span> blockchain</span>
+            {% elif info.testnet %}
+               <span>This is <span style="color:#ff6b62; font-weight: bold">TESTNET</span> blockchain</span>
+            {% elif info.devnet %}
+               <span>This is <span style="color:#af5bd2; font-weight: bold">DEVNET</span> blockchain</span>
+            {% endif %}
         </div>
 
         <div class="TitleDivider"></div>
@@ -73,6 +92,11 @@
             <span>
                 <label>SESH Token <a href="{{ render_state.arbiscan_url }}/token/{{ render_state.sesh_token_addr }}">ARB</a> / <a href="https://etherscan.io/token/{{ render_state.sesh_token_addr }}">ETH</a></label>
             </span>
+            {% if info.mainnet %}
+            <span>
+                <label><a href="https://token.getsession.org/contract-addresses">Contract Addresses</a></label>
+            </span>
+            {% endif %}
         </h4>
 
         <div class="TitleDivider"></div>
