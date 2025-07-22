@@ -911,7 +911,7 @@ def show_tx(txid, more_details=False):
                 args={ 'quorum_type': 0, 'start_height': tx['extra']['sn_state_change']['height'] })
 
     kindex_info = {} # { amount => { keyindex => {output-info} } }
-    block_info_req = None
+    block_info_req: list[FutureJSON] = []
     if 'vin' in tx:
         if len(tx['vin']) == 1 and 'gen' in tx['vin'][0]:
             tx['coinbase'] = True
@@ -937,10 +937,18 @@ def show_tx(txid, more_details=False):
                 }).get()
             if outputs and 'outs' in outputs and len(outputs['outs']) == len(outs_req):
                 outputs = outputs['outs']
-                # Also load block details for all of those outputs:
-                block_info_req = FutureJSON(omq, oxend, 'rpc.get_block_header_by_height', args={
-                    'heights': [o["height"] for o in outputs]
-                })
+
+                # Also load block details for all of those outputs (we chunk these in 1k intervals
+                # because this is the limit for this RPC endpoint)
+                height_list: list[int] = []
+                for o in outputs:
+                    height_list.append(o['height'])
+                    if len(height_list) >= 1000:
+                        block_info_req.append(FutureJSON(omq, oxend, 'rpc.get_block_header_by_height', args={'heights': height_list}))
+                        height_list.clear()
+                if len(height_list) > 0:
+                    block_info_req.append(FutureJSON(omq, oxend, 'rpc.get_block_header_by_height', args={'heights': height_list}))
+
                 i = 0
                 for inp in tx['vin']:
                     amount = inp['key']['amount']
@@ -961,12 +969,11 @@ def show_tx(txid, more_details=False):
         more_details = {}
 
     block_info = {} # { height => {block-info} }
-    if block_info_req:
-        bi = block_info_req.get()
+    for req in block_info_req:
+        bi = req.get() if req else {}
         if 'block_headers' in bi:
             for bh in bi['block_headers']:
                 block_info[bh['height']] = bh
-
 
     if testing_quorum:
         testing_quorum = testing_quorum.get()
