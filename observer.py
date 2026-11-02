@@ -1275,9 +1275,11 @@ def get_num_sn_awaiting_contrib() -> int:
     now:        float                = time.time()
     secs_since: float                = now - cache.num_sn_awaiting_contrib_last_query_ts
     if secs_since > 10:
+        OPEN_FOR_CONTRIBUTION: int = 1 # This is the IServiceNodeContribution.Status enum from the IServiceNodeRewards.sol
         url = config.staking_portal_url + "/api/ssb/contract/contribution"
         try:
-            response = requests.get(url)
+            # Backends that predate the `status` filter ignore it and return every contract.
+            response = requests.get(url, params={'status': OPEN_FOR_CONTRIBUTION})
             response.raise_for_status()  # Raise an error for bad HTTP status codes
             json_result = response.json()
 
@@ -1285,7 +1287,6 @@ def get_num_sn_awaiting_contrib() -> int:
                 cache.num_sn_awaiting_contrib = 0
                 contracts_array = json_result['contracts']
 
-                OPEN_FOR_CONTRIBUTION: int = 1 # This is the IServiceNodeContribution.Status enum from the IServiceNodeRewards.sol
                 for item in contracts_array:
                     if 'status' in item and item['status'] == OPEN_FOR_CONTRIBUTION:
                         cache.num_sn_awaiting_contrib += 1
