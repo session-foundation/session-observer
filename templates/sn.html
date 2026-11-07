@@ -93,15 +93,15 @@
       {%endif%}
     </span>
 
-    {%set pulse_voted = sn.pulse_participation | selectattr("voted") | list | length%}
-    {%set pulse_total = sn.pulse_participation | length%}
+    {%set pulse_voted = sn.pulse_votes.voted | length%}
+    {%set pulse_total = pulse_voted + sn.pulse_votes.missed | length%}
     <span title="How many times the session node participated in Pulse block production from the last 8 blocks it was supposed to participate. (Session nodes may miss at most 4 before being decommissioned).">
       <label{%if pulse_total >= 8 and pulse_voted < 4%} class="omg warning"{%endif%}>Pulse votes:</label>
       {{pulse_voted}} / {{pulse_total}}
     </span>
 
-    {%set cp_voted = sn.checkpoint_participation | selectattr("voted") | list | length%}
-    {%set cp_total = sn.checkpoint_participation | length%}
+    {%set cp_voted = sn.checkpoint_votes.voted | length%}
+    {%set cp_total = cp_voted + sn.checkpoint_votes.missed | length%}
     <span title="How many times the session node contributed a checkpoint vote from the last 8 blocks it was supposed to participate. (Session nodes may miss at most 4 before being decommissioned).">
       <label{%if cp_total >= 8 and cp_voted < 4%} class="omg warning"{%endif%}>Checkpoint votes:</label>
       {{cp_voted}} / {{cp_total}}
